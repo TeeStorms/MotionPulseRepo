@@ -54,6 +54,11 @@ class HabitsViewModel(
     private val _lastSyncedTime = MutableStateFlow<Instant?>(null)
     val lastSyncedTime: StateFlow<Instant?> = _lastSyncedTime.asStateFlow()
 
+    val isMoodLoggedToday: StateFlow<Boolean> = db.moodDao()
+        .getMoodFlowForDate(userId, LocalDate.now())
+        .map { it != null }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     init {
         if (userId.isNotEmpty()) {
             // Synchronizes the user profile from the remote data source in real-time.

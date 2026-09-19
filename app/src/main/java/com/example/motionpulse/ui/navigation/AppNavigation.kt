@@ -171,8 +171,27 @@ fun MainAppContent() {
                             navController.navigate(route)
                         }
                     },
+                    onNavigateToMood = { navController.navigate("mood") },
                     currentRoute = currentRoute,
                     isSyncFailed = isSyncFailed
+                )
+            }
+        }
+        composable("mood") {
+            val uid = (authState as? AuthState.Authenticated)?.uid ?: ""
+            if (uid.isNotEmpty()) {
+                val moodViewModel: com.example.motionpulse.ui.viewmodels.MoodViewModel = viewModel(
+                    key = uid,
+                    factory = com.example.motionpulse.ui.viewmodels.MoodViewModel.Factory(db, uid)
+                )
+                com.example.motionpulse.ui.screens.mood.MoodScreen(
+                    viewModel = moodViewModel,
+                    onNavigateToNav = { route -> 
+                        if (route != "mood") {
+                            navController.navigate(route)
+                        }
+                    },
+                    currentRoute = currentRoute
                 )
             }
         }

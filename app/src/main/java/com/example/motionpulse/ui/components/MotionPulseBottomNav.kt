@@ -3,6 +3,7 @@ package com.example.motionpulse.ui.components
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Icon
@@ -18,6 +19,7 @@ import com.example.motionpulse.ui.theme.BottomNavInactive
 
 sealed class BottomNavScreen(val route: String, val label: String, val icon: ImageVector) {
     object Home : BottomNavScreen("dashboard", "Home", Icons.Default.Home)
+    object Mood : BottomNavScreen("mood", "Mood", Icons.Default.Favorite)
     object Habits : BottomNavScreen("habits", "Habits", Icons.Default.Checklist)
     object Stats : BottomNavScreen("stats", "Stats", Icons.Default.BarChart)
     object Profile : BottomNavScreen("profile", "Profile", Icons.Default.Person)
@@ -30,6 +32,7 @@ fun MotionPulseBottomNav(
 ) {
     val items = listOf(
         BottomNavScreen.Home,
+        BottomNavScreen.Mood,
         BottomNavScreen.Habits,
         BottomNavScreen.Stats,
         BottomNavScreen.Profile

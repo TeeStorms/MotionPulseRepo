@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -34,6 +36,7 @@ fun DashboardScreen(
     viewModel: HabitsViewModel,
     onNavigateToDetail: (String) -> Unit,
     onNavigateToNav: (String) -> Unit,
+    onNavigateToMood: () -> Unit,
     currentRoute: String?,
     isSyncFailed: Boolean = false
 ) {
@@ -99,6 +102,53 @@ fun DashboardScreen(
                         .padding(horizontal = 24.dp)
                 ) {
                     item {
+                        // Daily Mood Prompt
+                        LaunchedEffect(userProfile) {
+                            // Check if today's mood logged. 
+                            // Note: ViewModel for Mood needed here or a check via HabitsViewModel if we add it there.
+                            // For now, using a simple nudge if profile exists.
+                        }
+                        
+                        val moodLogged by viewModel.isMoodLoggedToday.collectAsState()
+                        
+                        if (!moodLogged) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Card(
+                                onClick = onNavigateToMood,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(1.dp, CardBorderAlt, RoundedCornerShape(20.dp)),
+                                colors = CardDefaults.cardColors(containerColor = CardBackground.copy(alpha = 0.8f)),
+                                shape = RoundedCornerShape(20.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Favorite,
+                                        contentDescription = null,
+                                        tint = AccentPrimary,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Column {
+                                        Text(
+                                            text = "How's your rhythm today?",
+                                            color = TextPrimary,
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "Take a moment to check in with yourself",
+                                            color = TextSecondary,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
                         Spacer(modifier = Modifier.height(32.dp))
                         
                         // Motivation Card

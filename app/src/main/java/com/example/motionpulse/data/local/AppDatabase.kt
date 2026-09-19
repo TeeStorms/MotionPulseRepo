@@ -20,9 +20,10 @@ import com.example.motionpulse.data.local.entity.*
         HabitCompletionEntity::class,
         UserProfileEntity::class,
         BadgeEntity::class,
-        FriendEntity::class
+        FriendEntity::class,
+        MoodEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -32,4 +33,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun userProfileDao(): UserProfileDao
     abstract fun badgeDao(): BadgeDao
     abstract fun friendDao(): FriendDao
+    abstract fun moodDao(): MoodDao
 }
