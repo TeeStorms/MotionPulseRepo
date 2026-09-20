@@ -18,4 +18,7 @@ interface MoodDao {
 
     @Query("SELECT * FROM moods WHERE userId = :userId AND date BETWEEN :startDate AND :endDate")
     fun getMoodsForDateRange(userId: String, startDate: LocalDate, endDate: LocalDate): Flow<List<MoodEntity>>
+
+    @Query("SELECT * FROM moods WHERE updatedAt > :timestamp")
+    suspend fun getMoodsUpdatedAfter(timestamp: java.time.Instant): List<MoodEntity>
 }

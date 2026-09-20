@@ -32,9 +32,30 @@ class HabitSyncWorker(
         return try {
             syncHabits(uid)
             syncCompletions(uid)
+            syncMoods(uid)
             Result.success()
         } catch (e: Exception) {
             Result.retry()
+        }
+    }
+
+    private suspend fun syncMoods(uid: String) {
+        val localMoods = db.moodDao().getMoodsUpdatedAfter(Instant.EPOCH)
+        for (mood in localMoods) {
+            val dateStr = mood.date.toString()
+            val data = hashMapOf(
+                "id" to mood.id,
+                "userId" to mood.userId,
+                "date" to dateStr,
+                "moodLevel" to mood.moodLevel.name,
+                "factors" to mood.factors.map { it.name },
+                "note" to mood.note,
+                "loggedAt" to mood.loggedAt.toEpochMilli(),
+                "updatedAt" to mood.updatedAt.toEpochMilli()
+            )
+            firestore.collection("users").document(uid)
+                .collection("moods").document(dateStr)
+                .set(data, SetOptions.merge()).await()
         }
     }
 

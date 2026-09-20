@@ -39,11 +39,19 @@ fun MoodScreen(
 ) {
     val todayMood by viewModel.todayMood.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
+    val saveError by viewModel.saveError.collectAsState()
     val haptic = LocalHapticFeedback.current
+    val snackbarHostState = remember { SnackbarHostState() }
     
     var selectedLevel by remember { mutableStateOf<MoodLevel?>(null) }
     var selectedFactors by remember { mutableStateOf<Set<MoodFactor>>(emptySet()) }
     var note by remember { mutableStateOf("") }
+
+    LaunchedEffect(saveError) {
+        saveError?.let {
+            snackbarHostState.showSnackbar(it)
+        }
+    }
 
     LaunchedEffect(todayMood) {
         todayMood?.let {
@@ -54,6 +62,7 @@ fun MoodScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             MotionPulseBottomNav(
                 currentRoute = currentRoute,

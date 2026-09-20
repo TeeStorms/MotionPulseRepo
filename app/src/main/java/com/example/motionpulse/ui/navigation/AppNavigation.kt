@@ -35,6 +35,7 @@ import com.example.motionpulse.ui.screens.onboarding.OnboardingScreen
 import com.example.motionpulse.ui.screens.dashboard.DashboardScreen
 import com.example.motionpulse.ui.screens.dashboard.HabitDetailScreen
 import com.example.motionpulse.ui.screens.habits.HabitsScreen
+import com.example.motionpulse.ui.screens.community.CommunityScreen
 import com.example.motionpulse.ui.screens.profile.BadgesGalleryScreen
 import com.example.motionpulse.ui.screens.profile.ProfileScreen
 import com.example.motionpulse.ui.screens.stats.StatsScreen
@@ -222,6 +223,24 @@ fun MainAppContent() {
                     onNavigateToDetail = { habitId -> navController.navigate("habit_detail/$habitId") },
                     onNavigateToNav = { route -> 
                         if (route != "habits") {
+                            navController.navigate(route)
+                        }
+                    },
+                    currentRoute = currentRoute
+                )
+            }
+        }
+        composable("community") {
+            val uid = (authState as? AuthState.Authenticated)?.uid ?: ""
+            if (uid.isNotEmpty()) {
+                val communityViewModel: com.example.motionpulse.ui.viewmodels.CommunityViewModel = viewModel(
+                    key = uid,
+                    factory = com.example.motionpulse.ui.viewmodels.CommunityViewModel.Factory(db, uid)
+                )
+                CommunityScreen(
+                    viewModel = communityViewModel,
+                    onNavigateToNav = { route -> 
+                        if (route != "community") {
                             navController.navigate(route)
                         }
                     },

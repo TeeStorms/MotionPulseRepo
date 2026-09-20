@@ -23,7 +23,7 @@ import com.example.motionpulse.data.local.entity.*
         FriendEntity::class,
         MoodEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
