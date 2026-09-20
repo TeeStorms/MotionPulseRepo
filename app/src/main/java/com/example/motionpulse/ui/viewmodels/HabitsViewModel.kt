@@ -30,7 +30,8 @@ class HabitsViewModel(
     private val db: AppDatabase,
     private val userId: String,
     private val habitRepository: HabitRepository = HabitRepository(db),
-    private val authRepository: AuthRepository = AuthRepository()
+    private val authRepository: AuthRepository = AuthRepository(),
+    private val communityRepository: com.example.motionpulse.data.repository.CommunityRepository = com.example.motionpulse.data.repository.CommunityRepository()
 ) : ViewModel() {
 
     private val _selectedCategory = MutableStateFlow<String?>(null)
@@ -228,7 +229,9 @@ class HabitsViewModel(
                     .thenBy { it.habit.manualOrder } // Manual priority
                     .thenBy { it.habit.reminderTime ?: "23:59" } // Then by time
                 )
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        }
+        .catch { emit(emptyList()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val allHabits: StateFlow<List<HabitWithStatus>> = db.habitDao()
         .getHabitsForUser(userId)
@@ -264,7 +267,9 @@ class HabitsViewModel(
                 .thenBy { it.habit.manualOrder } // Then manual priority
                 .thenBy { it.habit.reminderTime ?: "23:59" }
             )
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        }
+        .catch { emit(emptyList()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val archivedHabits: StateFlow<List<HabitEntity>> = db.habitDao()
         .getArchivedHabitsForUser(userId)
@@ -495,10 +500,22 @@ class HabitsViewModel(
                 if (profile != null) {
                     val isNewPb = newCurrentStreak > habit.longestStreak
                     val xpResult = GamificationEngine.calculateXpGain(profile.totalAuraXp, isNewPb)
-                    db.userProfileDao().updateProfile(profile.copy(
+                    
+                    val todayStr = date.toString()
+                    val newRecentXp = profile.recentXp.toMutableMap()
+                    newRecentXp[todayStr] = (newRecentXp[todayStr] ?: 0L) + xpResult.auraXpGained
+                    
+                    val updatedProfile = profile.copy(
                         totalAuraXp = xpResult.newTotalXp,
-                        currentLevel = xpResult.newLevel
-                    ))
+                        currentLevel = xpResult.newLevel,
+                        currentStreak = newCurrentStreak, // Track latest streak for leaderboard
+                        recentXp = newRecentXp
+                    )
+                    db.userProfileDao().updateProfile(updatedProfile)
+                    authRepository.updateUserSetting("totalAuraXp", updatedProfile.totalAuraXp)
+                    authRepository.updateUserSetting("currentLevel", updatedProfile.currentLevel)
+                    authRepository.updateUserSetting("currentStreak", updatedProfile.currentStreak)
+                    authRepository.updateUserSetting("recentXp", updatedProfile.recentXp)
 
                     // Badge Check
                     val currentBadges = db.badgeDao().getBadgesForUser(userId).first().map { it.badgeType }.toSet()
@@ -523,6 +540,36 @@ class HabitsViewModel(
                             triggeredByCompletionId = completionId
                         ))
                         _badgeEvent.emit(badgeType)
+                        
+                        // Community Milestone
+                        communityRepository.postFeedEntry(com.example.motionpulse.data.local.entity.ActivityFeedEntry(
+                            actorId = userId,
+                            actorName = profile.displayName,
+                            actorAvatarUrl = profile.avatarUrl,
+                            eventType = com.example.motionpulse.data.local.entity.FeedEventType.STREAK_MILESTONE,
+                            streakCount = newCurrentStreak,
+                            timestamp = System.currentTimeMillis()
+                        ))
+                    }
+                    
+                    // Check completion milestone
+                    val todaysCompletions = db.habitCompletionDao().getAllCompletionsFlow().first().filter { it.date == date }
+                    if (todaysCompletions.size == totalHabits) {
+                        communityRepository.postFeedEntry(com.example.motionpulse.data.local.entity.ActivityFeedEntry(
+                            actorId = userId,
+                            actorName = profile.displayName,
+                            actorAvatarUrl = profile.avatarUrl,
+                            eventType = com.example.motionpulse.data.local.entity.FeedEventType.ALL_HABITS_COMPLETED,
+                            timestamp = System.currentTimeMillis()
+                        ))
+                    }
+                }
+
+                // Check Duels
+                val activeDuels = communityRepository.getDuels(userId).first()
+                for (duel in activeDuels) {
+                    if (duel.status == "ACTIVE" && duel.habitType == habit.category) {
+                        communityRepository.updateDuelScore(duel.id, userId)
                     }
                 }
 
