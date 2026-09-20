@@ -17,8 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.motionpulse.ui.components.MotionPulseBottomNav
 import com.example.motionpulse.ui.screens.dashboard.components.DashboardHeader
-import com.example.motionpulse.ui.screens.stats.components.HabitConsistencyCard
-import com.example.motionpulse.ui.screens.stats.components.StatBox
+import com.example.motionpulse.ui.screens.stats.components.*
 import com.example.motionpulse.ui.theme.*
 import com.example.motionpulse.ui.viewmodels.StatsViewMode
 import com.example.motionpulse.ui.viewmodels.StatsViewModel
@@ -118,6 +117,20 @@ fun StatsScreen(
                                     RoundedCornerShape(16.dp)
                                 )
                         )
+                    }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    val correlationData by viewModel.correlationData.collectAsState()
+                    correlationData?.let { data ->
+                        MoodHabitCorrelationCard(
+                            dailyMoods = data.dailyMoods,
+                            dailyCompletions = data.dailyCompletions
+                        )
+                        InsightCard(insight = data.insight)
+                        data.bestDay?.let { best ->
+                            BestDayCard(bestDay = best)
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(32.dp))

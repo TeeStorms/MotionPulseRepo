@@ -134,7 +134,64 @@ class StatsViewModel(
                 weeklyPercent = weeklyPercent,
                 weeklyTrend = weeklyPercent - prevWeeklyPercent
             )
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SummaryStats())
+        }
+        .catch { emit(SummaryStats()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SummaryStats())
+
+    val correlationData: StateFlow<CorrelationData?> = combine(
+        db.moodDao().getMoodsForDateRange(
+            userId, 
+            LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)),
+            LocalDate.now().with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY))
+        ),
+        db.habitDao().getHabitsForUser(userId),
+        db.habitCompletionDao().getAllCompletionsFlow()
+    ) { moods, habits, completions ->
+        val today = LocalDate.now()
+        val startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        val weekDates = (0..6).map { startOfWeek.plusDays(it.toLong()) }
+        
+        // 1. Line chart data (Mood 1-5 per day)
+        val dailyMoods = weekDates.map { date ->
+            moods.find { it.date == date }?.moodLevel
+        }
+
+        // 2. Dot row data (Habit completion count per day)
+        val dailyCompletions = weekDates.map { date ->
+            completions.count { it.date == date && it.status == CompletionStatus.COMPLETED }
+        }
+
+        // 3. Insight
+        val insight = com.example.motionpulse.domain.scoring.MoodHabitInsightGenerator.generateInsight(
+            moods, habits, completions
+        )
+
+        // 4. Best Day Calculation
+        // Definition: Highest mood score + 100% habits done
+        val bestDay = weekDates.mapNotNull { date ->
+            val mood = moods.find { it.date == date } ?: return@mapNotNull null
+            val scheduledCount = habits.count { 
+                com.example.motionpulse.domain.models.FrequencyConfig.decodeSafe(it.frequencyConfig).isScheduled(date) 
+            }
+            val doneCount = completions.count { it.date == date && it.status == CompletionStatus.COMPLETED }
+            
+            if (scheduledCount > 0 && doneCount >= scheduledCount) {
+                BestDayInfo(date, mood.moodLevel, doneCount, scheduledCount)
+            } else null
+        }.maxByOrNull { moodToScore(it.moodLevel) }
+
+        CorrelationData(dailyMoods, dailyCompletions, insight, bestDay) as CorrelationData?
+    }
+    .catch { emit(null) }
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    private fun moodToScore(level: com.example.motionpulse.data.local.entity.MoodLevel): Int = when (level) {
+        com.example.motionpulse.data.local.entity.MoodLevel.DRAINED -> 1
+        com.example.motionpulse.data.local.entity.MoodLevel.LOW -> 2
+        com.example.motionpulse.data.local.entity.MoodLevel.STEADY -> 3
+        com.example.motionpulse.data.local.entity.MoodLevel.GOOD -> 4
+        com.example.motionpulse.data.local.entity.MoodLevel.ENERGIZED -> 5
+    }
 
     // Dedicated celebration trigger
     init {
@@ -182,7 +239,9 @@ class StatsViewModel(
                 completedCount = gridStatus.count { it.status == CompletionStatus.COMPLETED }
             )
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }
+    .catch { emit(emptyList()) }
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun setViewMode(mode: StatsViewMode) {
         _viewMode.value = mode
@@ -329,4 +388,18 @@ data class DayStatus(
     val date: LocalDate,
     val status: CompletionStatus,
     val valueLogged: Float? = null
+)
+
+data class CorrelationData(
+    val dailyMoods: List<com.example.motionpulse.data.local.entity.MoodLevel?>,
+    val dailyCompletions: List<Int>,
+    val insight: String,
+    val bestDay: BestDayInfo?
+)
+
+data class BestDayInfo(
+    val date: LocalDate,
+    val moodLevel: com.example.motionpulse.data.local.entity.MoodLevel,
+    val habitsDone: Int,
+    val totalHabits: Int
 )
