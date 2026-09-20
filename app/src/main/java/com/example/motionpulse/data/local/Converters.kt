@@ -59,4 +59,14 @@ class Converters {
             names.map { com.example.motionpulse.data.local.entity.MoodFactor.valueOf(it) }
         }
     }
+
+    @TypeConverter
+    fun fromXpMap(value: Map<String, Long>?): String? {
+        return value?.let { Json.encodeToString(it) }
+    }
+
+    @TypeConverter
+    fun toXpMap(value: String?): Map<String, Long>? {
+        return value?.let { Json.decodeFromString<Map<String, Long>>(it) }
+    }
 }
