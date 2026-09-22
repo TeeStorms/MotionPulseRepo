@@ -16,6 +16,15 @@ class PreferenceRepository(context: Context) {
     companion object {
         private const val KEY_FIRST_LAUNCH = "is_first_launch"
         private const val KEY_LAST_EMAIL = "last_used_email"
+        private const val KEY_REMINDERS_ENABLED = "reminders_enabled"
+    }
+
+    fun isRemindersEnabled(): Boolean {
+        return prefs.getBoolean(KEY_REMINDERS_ENABLED, true)
+    }
+
+    fun setRemindersEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_REMINDERS_ENABLED, enabled).apply()
     }
 
     /**

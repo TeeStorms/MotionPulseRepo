@@ -18,6 +18,9 @@ class HabitActionReceiver : BroadcastReceiver() {
         val habitId = intent.getStringExtra("HABIT_ID") ?: return
         val action = intent.action ?: return
 
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        notificationManager.cancel(habitId.hashCode())
+
         val db = Room.databaseBuilder(
             context.applicationContext,
             AppDatabase::class.java, "motion_pulse_db"

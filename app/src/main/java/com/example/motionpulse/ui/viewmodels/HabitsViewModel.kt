@@ -29,10 +29,13 @@ import com.example.motionpulse.data.repository.HabitRepository
 class HabitsViewModel(
     private val db: AppDatabase,
     private val userId: String,
+    context: android.content.Context,
     private val habitRepository: HabitRepository = HabitRepository(db),
     private val authRepository: AuthRepository = AuthRepository(),
     private val communityRepository: com.example.motionpulse.data.repository.CommunityRepository = com.example.motionpulse.data.repository.CommunityRepository()
 ) : ViewModel() {
+    
+    private val reminderManager = com.example.motionpulse.ui.notifications.ReminderManager(context)
 
     private val _selectedCategory = MutableStateFlow<String?>(null)
     val selectedCategory: StateFlow<String?> = _selectedCategory.asStateFlow()
@@ -59,6 +62,10 @@ class HabitsViewModel(
         .getMoodFlowForDate(userId, LocalDate.now())
         .map { it != null }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val todayMood: StateFlow<com.example.motionpulse.data.local.entity.MoodEntity?> = db.moodDao()
+        .getMoodFlowForDate(userId, LocalDate.now())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     init {
         if (userId.isNotEmpty()) {
@@ -219,12 +226,14 @@ class HabitsViewModel(
                         habit = habit,
                         isCompletedToday = isCompleted,
                         isSyncing = syncingIds.contains(habit.id),
-                        isOverdue = isOverdue
+                        isOverdue = isOverdue,
+                        loggedAt = todayCompletion?.loggedAt
                     )
                 }.distinctBy { it.habit.title.lowercase().trim() }
 // Deep Deduplication
                 .sortedWith(
-                    compareBy<HabitWithStatus> { it.isCompletedToday } // Completed at bottom
+                    compareByDescending<HabitWithStatus> { it.loggedAt ?: Instant.MIN }
+                    .thenBy { it.isCompletedToday } // Completed at bottom
                     .thenByDescending { it.isOverdue } // Overdue at top
                     .thenBy { it.habit.manualOrder } // Manual priority
                     .thenBy { it.habit.reminderTime ?: "23:59" } // Then by time
@@ -363,6 +372,7 @@ class HabitsViewModel(
             try {
                 // 1. Write locally
                 db.habitDao().insertHabit(habit)
+                reminderManager.scheduleReminder(habit)
                 
                 // 2. Sync to Firestore
                 _syncingHabitIds.update { it + habit.id }
@@ -407,7 +417,10 @@ class HabitsViewModel(
             )
             
             try {
+                reminderManager.cancelReminder(habitId)
                 db.habitDao().updateHabit(updated)
+                reminderManager.scheduleReminder(updated)
+                
                 _syncingHabitIds.update { it + habitId }
                 habitRepository.saveHabit(userId, updated)
                 onSuccess()
@@ -433,6 +446,8 @@ class HabitsViewModel(
         viewModelScope.launch {
             val updatedHabit = habit.copy(isArchived = true, updatedAt = Instant.now())
             db.habitDao().updateHabit(updatedHabit)
+            reminderManager.cancelReminder(habit.id)
+            
             _syncingHabitIds.update { it + habit.id }
             try {
                 habitRepository.archiveHabit(userId, habit.id)
@@ -450,11 +465,14 @@ class HabitsViewModel(
     fun unarchiveHabit(habit: HabitEntity) {
         viewModelScope.launch {
             val now = Instant.now()
+            val restoredHabit = habit.copy(isArchived = false, updatedAt = now)
             db.habitDao().unarchiveHabit(habit.id, now)
+            reminderManager.scheduleReminder(restoredHabit)
+            
             _syncingHabitIds.update { it + habit.id }
             try {
                 // Pushes the updated archive status to the remote store.
-                habitRepository.saveHabit(userId, habit.copy(isArchived = false, updatedAt = now))
+                habitRepository.saveHabit(userId, restoredHabit)
             } catch (e: Exception) {
                 // Background sync will retry persistence.
             } finally {
@@ -649,9 +667,9 @@ class HabitsViewModel(
         }
     }
 
-    class Factory(private val db: AppDatabase, private val userId: String) : ViewModelProvider.Factory {
+    class Factory(private val db: AppDatabase, private val userId: String, private val context: android.content.Context) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return HabitsViewModel(db, userId) as T
+            return HabitsViewModel(db, userId, context.applicationContext) as T
         }
     }
 }
@@ -661,5 +679,6 @@ data class HabitWithStatus(
     val isCompletedToday: Boolean,
     val isSyncing: Boolean = false,
     val isOverdue: Boolean = false,
-    val isRecent: Boolean = false
+    val isRecent: Boolean = false,
+    val loggedAt: Instant? = null
 )

@@ -162,17 +162,15 @@ fun MainAppContent() {
             if (uid.isNotEmpty()) {
                 val habitsViewModel: HabitsViewModel = viewModel(
                     key = uid,
-                    factory = HabitsViewModel.Factory(db, uid)
+                    factory = HabitsViewModel.Factory(db, uid, context)
                 )
                 DashboardScreen(
                     viewModel = habitsViewModel,
-                    onNavigateToDetail = { habitId -> navController.navigate("habit_detail/$habitId") },
                     onNavigateToNav = { route -> 
                         if (route != "dashboard") {
                             navController.navigate(route)
                         }
                     },
-                    onNavigateToMood = { navController.navigate("mood") },
                     currentRoute = currentRoute,
                     isSyncFailed = isSyncFailed
                 )
@@ -202,7 +200,7 @@ fun MainAppContent() {
             if (uid.isNotEmpty()) {
                 val habitsViewModel: HabitsViewModel = viewModel(
                     key = uid,
-                    factory = HabitsViewModel.Factory(db, uid)
+                    factory = HabitsViewModel.Factory(db, uid, context)
                 )
                 HabitDetailScreen(
                     habitId = habitId,
@@ -216,7 +214,7 @@ fun MainAppContent() {
             if (uid.isNotEmpty()) {
                 val habitsViewModel: HabitsViewModel = viewModel(
                     key = uid,
-                    factory = HabitsViewModel.Factory(db, uid)
+                    factory = HabitsViewModel.Factory(db, uid, context)
                 )
                 HabitsScreen(
                     viewModel = habitsViewModel,
