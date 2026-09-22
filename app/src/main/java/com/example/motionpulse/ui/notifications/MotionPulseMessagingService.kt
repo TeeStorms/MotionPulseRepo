@@ -38,7 +38,7 @@ class MotionPulseMessagingService : FirebaseMessagingService() {
 
         val channelId = "community_notifications"
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.mipmap.ic_launcher) // Fallback to launcher icon
+            .setSmallIcon(R.drawable.ic_logo)
             .setContentTitle(title)
             .setContentText(message)
             .setAutoCancel(true)

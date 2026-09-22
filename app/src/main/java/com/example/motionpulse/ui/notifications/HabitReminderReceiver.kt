@@ -63,7 +63,7 @@ class HabitReminderReceiver : BroadcastReceiver() {
         val skipPendingIntent = PendingIntent.getBroadcast(context, habitId.hashCode() + 2, skipIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_logo)
             .setContentTitle(habitTitle)
             .setContentText("Time to complete your habit!")
             .setContentIntent(mainPendingIntent)
