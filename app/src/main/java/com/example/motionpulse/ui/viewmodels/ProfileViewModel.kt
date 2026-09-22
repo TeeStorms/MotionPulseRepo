@@ -64,11 +64,23 @@ class ProfileViewModel(
     /**
      * Toggles the global reminder setting and persists it to the backend.
      */
-    fun toggleReminders(enabled: Boolean) {
+    fun toggleReminders(enabled: Boolean, context: android.content.Context) {
+        val prefs = com.example.motionpulse.data.repository.PreferenceRepository(context)
+        prefs.setRemindersEnabled(enabled)
+
         viewModelScope.launch {
             authRepository.updateUserSetting("remindersEnabled", enabled)
             profileState.value.userProfile?.let {
                 db.userProfileDao().updateProfile(it.copy(remindersEnabled = enabled))
+            }
+            
+            val reminderManager = com.example.motionpulse.ui.notifications.ReminderManager(context)
+            if (enabled) {
+                val habits = db.habitDao().getAllActiveHabits().first()
+                reminderManager.scheduleAllReminders(habits)
+            } else {
+                val habits = db.habitDao().getAllActiveHabits().first()
+                reminderManager.cancelAllReminders(habits.map { it.id })
             }
         }
     }

@@ -101,7 +101,7 @@ fun ProfileScreen(
                     onSeeAll = onSeeAllBadges
                 )
 
-                Spacer(modifier = Modifier.height(32.dp))
+
 
                 Text(
                     text = "Settings",
@@ -118,7 +118,7 @@ fun ProfileScreen(
                 SettingItem(label = "Language: ${profile?.language ?: "English"}", onClick = { showLanguageDialog = true })
                 SettingItem(
                     label = "Reminder: ${if (profile?.remindersEnabled == true) "On" else "Off"}",
-                    onClick = { viewModel.toggleReminders(profile?.remindersEnabled != true) }
+                    onClick = { viewModel.toggleReminders(profile?.remindersEnabled != true, context) }
                 )
                 SettingItem(label = "Manage Linked Accounts", onClick = { /* TODO: Provider Dialog */ })
                 
@@ -218,3 +218,5 @@ fun ProfileScreen(
         )
     }
 }
+
+
