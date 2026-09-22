@@ -27,6 +27,7 @@ import com.example.motionpulse.data.local.entity.HabitEntity
 import com.example.motionpulse.ui.components.MotionPulseBottomNav
 import com.example.motionpulse.ui.components.MotionPulseTextField
 import com.example.motionpulse.ui.screens.dashboard.components.HabitCard
+import com.example.motionpulse.ui.screens.dashboard.components.MotionPulseHeader
 import com.example.motionpulse.ui.screens.habits.components.AddHabitOverlay
 import com.example.motionpulse.ui.screens.habits.components.CategoryTag
 import com.example.motionpulse.ui.theme.*
@@ -89,21 +90,10 @@ fun HabitsScreen(
                 modifier = Modifier.fillMaxSize()
             ) {
                 // Header
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp)
-                        .background(HeaderGradient2Stop)
-                        .padding(24.dp),
-                    contentAlignment = Alignment.BottomStart
-                ) {
-                    Text(
-                        text = "Habits",
-                        color = TextPrimary,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                MotionPulseHeader(
+                    title = "My Habits",
+                    gradient = HeaderGradient2Stop
+                )
 
                 Column(modifier = Modifier.padding(horizontal = 24.dp)) {
                     Spacer(modifier = Modifier.height(24.dp))

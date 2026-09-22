@@ -28,6 +28,7 @@ import com.example.motionpulse.data.local.entity.MoodLevel
 import com.example.motionpulse.ui.components.GradientButton
 import com.example.motionpulse.ui.components.MotionPulseBottomNav
 import com.example.motionpulse.ui.components.MotionPulseTextField
+import com.example.motionpulse.ui.screens.dashboard.components.MotionPulseHeader
 import com.example.motionpulse.ui.theme.*
 import com.example.motionpulse.ui.viewmodels.MoodViewModel
 
@@ -42,10 +43,22 @@ fun MoodScreen(
     val saveError by viewModel.saveError.collectAsState()
     val haptic = LocalHapticFeedback.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
     
     var selectedLevel by remember { mutableStateOf<MoodLevel?>(null) }
-    var selectedFactors by remember { mutableStateOf<Set<MoodFactor>>(emptySet()) }
+    var selectedFactor by remember { mutableStateOf<MoodFactor?>(null) }
     var note by remember { mutableStateOf("") }
+    var showSuccessPopup by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        viewModel.saveSuccess.collect {
+            showSuccessPopup = true
+            focusManager.clearFocus()
+            // We don't manually clear the 'note' variable here because 
+            // the screen is in 'Update' mode once saved, and we want 
+            // the user to see their saved reflection if they return.
+        }
+    }
 
     LaunchedEffect(saveError) {
         saveError?.let {
@@ -56,9 +69,40 @@ fun MoodScreen(
     LaunchedEffect(todayMood) {
         todayMood?.let {
             selectedLevel = it.moodLevel
-            selectedFactors = it.factors.toSet()
+            selectedFactor = it.factors.firstOrNull()
             note = it.note ?: ""
         }
+    }
+
+    if (showSuccessPopup) {
+        AlertDialog(
+            onDismissRequest = { showSuccessPopup = false },
+            containerColor = CardBackground,
+            title = { 
+                Text(
+                    text = "Rhythm Logged!", 
+                    color = TextPrimary, 
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                ) 
+            },
+            text = { 
+                Text(
+                    text = "Your daily mood has been saved successfully.", 
+                    color = TextSecondary 
+                ) 
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = { showSuccessPopup = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = AccentPrimary)
+                ) {
+                    Text("Great", fontWeight = FontWeight.Bold)
+                }
+            },
+            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier.border(1.dp, CardBorderAlt.copy(alpha = 0.5f), RoundedCornerShape(24.dp))
+        )
     }
 
     Scaffold(
@@ -78,30 +122,10 @@ fun MoodScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             // Header
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
-                    .background(HeaderGradient3Stop)
-                    .padding(24.dp),
-                contentAlignment = Alignment.BottomStart
-            ) {
-                Column {
-                    Text(
-                        text = "MOTION.PULSE",
-                        color = TextPrimary.copy(alpha = 0.7f),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Black
-                    )
-                    Text(
-                        text = "How's your rhythm\ntoday?",
-                        color = TextPrimary,
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        lineHeight = 34.sp
-                    )
-                }
-            }
+            MotionPulseHeader(
+                title = "How's your rhythm\ntoday?",
+                subtitle = "MOTION.PULSE"
+            )
 
             Column(
                 modifier = Modifier
@@ -113,11 +137,11 @@ fun MoodScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(160.dp),
+                        .height(180.dp), // Increased from 160.dp to prevent clipping tallest bar labels
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.Bottom
                 ) {
-                    MoodLevel.values().forEachIndexed { index, level ->
+                    MoodLevel.entries.forEachIndexed { index, level ->
                         val isSelected = selectedLevel == level
                         val barHeight = 40.dp + (index * 25).dp
                         
@@ -141,7 +165,7 @@ fun MoodScreen(
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = level.name.lowercase().capitalize(),
+                                text = level.name.lowercase().replaceFirstChar { it.uppercase() },
                                 color = if (isSelected) TextPrimary else TextSecondary,
                                 fontSize = 10.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
@@ -155,7 +179,7 @@ fun MoodScreen(
                 AnimatedVisibility(visible = selectedLevel != null) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = selectedLevel?.name?.lowercase()?.capitalize() ?: "",
+                            text = selectedLevel?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "",
                             color = AccentPrimary,
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Black
@@ -181,18 +205,14 @@ fun MoodScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            items(MoodFactor.values()) { factor ->
-                                val isSelected = selectedFactors.contains(factor)
+                            items(MoodFactor.entries) { factor ->
+                                val isSelected = selectedFactor == factor
                                 FilterChip(
                                     selected = isSelected,
                                     onClick = {
-                                        selectedFactors = if (isSelected) {
-                                            selectedFactors - factor
-                                        } else {
-                                            selectedFactors + factor
-                                        }
+                                        selectedFactor = if (isSelected) null else factor
                                     },
-                                    label = { Text(factor.name.lowercase().capitalize()) },
+                                    label = { Text(factor.name.lowercase().replaceFirstChar { it.uppercase() }) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = AccentPrimary,
                                         selectedLabelColor = Color.White,
@@ -223,10 +243,11 @@ fun MoodScreen(
                             text = if (todayMood != null) "Update mood" else "Log mood",
                             onClick = {
                                 selectedLevel?.let {
-                                    viewModel.logMood(it, selectedFactors.toList(), note.ifBlank { null })
+                                    viewModel.logMood(it, listOfNotNull(selectedFactor), note.ifBlank { null })
                                 }
                             },
-                            isLoading = isSaving
+                            isLoading = isSaving,
+                            enabled = selectedLevel != null && !isSaving
                         )
                     }
                 }

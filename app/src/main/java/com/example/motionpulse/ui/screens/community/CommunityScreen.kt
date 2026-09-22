@@ -25,6 +25,7 @@ import com.example.motionpulse.data.local.entity.ActivityFeedEntry
 import com.example.motionpulse.data.local.entity.FeedEventType
 import com.example.motionpulse.data.local.entity.UserProfileEntity
 import com.example.motionpulse.ui.components.MotionPulseBottomNav
+import com.example.motionpulse.ui.screens.dashboard.components.MotionPulseHeader
 import com.example.motionpulse.ui.theme.*
 import com.example.motionpulse.ui.viewmodels.CommunityViewModel
 import java.time.Instant
@@ -63,29 +64,10 @@ fun CommunityScreen(
                 .padding(padding)
         ) {
             // Header
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
-                    .background(HeaderGradient3Stop)
-                    .padding(24.dp),
-                contentAlignment = Alignment.BottomStart
-            ) {
-                Column {
-                    Text(
-                        text = "MOTION.PULSE",
-                        color = TextPrimary.copy(alpha = 0.7f),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Black
-                    )
-                    Text(
-                        text = "Pulse Community",
-                        color = TextPrimary,
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
+            MotionPulseHeader(
+                title = "Pulse Community",
+                subtitle = "MOTION.PULSE"
+            )
 
             TabRow(
                 selectedTabIndex = selectedTab,

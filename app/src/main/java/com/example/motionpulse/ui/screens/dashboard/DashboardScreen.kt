@@ -10,7 +10,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,24 +18,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.motionpulse.ui.components.MotionPulseBottomNav
-import com.example.motionpulse.ui.screens.dashboard.components.DashboardHeader
-import com.example.motionpulse.ui.screens.dashboard.components.HabitCard
-import com.example.motionpulse.ui.screens.dashboard.components.HabitCardSkeleton
+import com.example.motionpulse.ui.screens.dashboard.components.*
 import com.example.motionpulse.ui.theme.*
 import com.example.motionpulse.ui.viewmodels.HabitsViewModel
-import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
-import java.time.temporal.ChronoUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     viewModel: HabitsViewModel,
-    onNavigateToDetail: (String) -> Unit,
     onNavigateToNav: (String) -> Unit,
-    onNavigateToMood: () -> Unit,
     currentRoute: String?,
     isSyncFailed: Boolean = false
 ) {
@@ -44,9 +36,11 @@ fun DashboardScreen(
     val habitsWithStatus by viewModel.habits.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
-    val lastSyncedTime by viewModel.lastSyncedTime.collectAsState()
+    val todayMood by viewModel.todayMood.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     
+    var isExpanded by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
         viewModel.badgeEvent.collect { badge ->
             snackbarHostState.showSnackbar("Achievement Unlocked: ${badge.name.replace("_", " ")}")
@@ -68,32 +62,11 @@ fun DashboardScreen(
             onRefresh = { viewModel.refreshHabits() },
             modifier = Modifier.padding(padding)
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                if (isSyncFailed) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color.Yellow.copy(alpha = 0.2f))
-                            .padding(horizontal = 24.dp, vertical = 8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Local Mode: Cloud sync is disabled due to permissions. Fix rules to backup data.",
-                            color = Color.DarkGray,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                        )
-                    }
-                }
-
-                DashboardHeader(
-                    displayName = userProfile?.displayName ?: "User",
-                    journeyDay = userProfile?.createdAt?.let { 
-                        ChronoUnit.DAYS.between(it.atZone(ZoneId.systemDefault()).toLocalDate(), LocalDate.now()).toInt() + 1
-                    } ?: 1
+            Column(modifier = Modifier.fillMaxSize()) {
+                MotionPulseHeader(
+                    title = "Welcome back,\n${userProfile?.displayName ?: "User"}",
+                    showProfileIcon = true,
+                    todayMood = todayMood
                 )
 
                 LazyColumn(
@@ -102,95 +75,106 @@ fun DashboardScreen(
                         .padding(horizontal = 24.dp)
                 ) {
                     item {
-                        // Daily Mood Prompt
-                        LaunchedEffect(userProfile) {
-                            // Check if today's mood logged. 
-                            // Note: ViewModel for Mood needed here or a check via HabitsViewModel if we add it there.
-                            // For now, using a simple nudge if profile exists.
-                        }
-                        
-                        val moodLogged by viewModel.isMoodLoggedToday.collectAsState()
-                        
-                        if (!moodLogged) {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Card(
-                                onClick = onNavigateToMood,
+                        if (isSyncFailed) {
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .border(1.dp, CardBorderAlt, RoundedCornerShape(20.dp)),
-                                colors = CardDefaults.cardColors(containerColor = CardBackground.copy(alpha = 0.8f)),
-                                shape = RoundedCornerShape(20.dp)
+                                    .background(Color.Yellow.copy(alpha = 0.2f))
+                                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Favorite,
-                                        contentDescription = null,
-                                        tint = AccentPrimary,
-                                        modifier = Modifier.size(32.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(16.dp))
-                                    Column {
-                                        Text(
-                                            text = "How's your rhythm today?",
-                                            color = TextPrimary,
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = "Take a moment to check in with yourself",
-                                            color = TextSecondary,
-                                            fontSize = 12.sp
-                                        )
-                                    }
-                                }
+                                Text(
+                                    text = "Local Mode: Cloud sync is disabled. Fix rules to backup data.",
+                                    color = Color.DarkGray,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
                             }
                         }
+                    }
 
-                        Spacer(modifier = Modifier.height(32.dp))
-                        
-                        // Motivation Card
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .border(1.dp, CardBorderAlt, RoundedCornerShape(20.dp))
-                                .background(CardBackground, RoundedCornerShape(20.dp))
-                                .padding(24.dp)
-                        ) {
+                    item {
+                        val doneCount = habitsWithStatus.count { it.isCompletedToday }
+                        DashboardProgressCircle(
+                            doneCount = doneCount,
+                            totalCount = habitsWithStatus.size
+                        )
+                    }
+
+                    item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Motivation & Reflection Card
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, CardBorderAlt, RoundedCornerShape(24.dp)),
+                        colors = CardDefaults.cardColors(containerColor = CardBackground),
+                        shape = RoundedCornerShape(24.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(24.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(text = "💡", fontSize = 20.sp)
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "MOTIVATION OF THE DAY",
+                                    color = TextPrimary.copy(alpha = 0.6f),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Black,
+                                    letterSpacing = 1.sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = "Motivation of the day: ${viewModel.dailyQuote}",
+                                text = viewModel.dailyQuote,
                                 color = TextPrimary,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 lineHeight = 26.sp
                             )
-                        }
-
-                        Spacer(modifier = Modifier.height(32.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.Bottom
-                        ) {
-                            Text(
-                                text = if (habitsWithStatus.isEmpty() && !isLoading) "Ready to start?" else "Today's Habits",
-                                color = TextPrimary,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold
-                            )
                             
-                            lastSyncedTime?.let {
-                                Text(
-                                    text = "Synced ${formatRelativeTime(it)}",
-                                    color = TextSecondary.copy(alpha = 0.6f),
-                                    fontSize = 12.sp
-                                )
+                            todayMood?.note?.let { note ->
+                                if (note.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(20.dp))
+                                    HorizontalDivider(color = CardBorderAlt.copy(alpha = 0.2f), thickness = 1.dp)
+                                    Spacer(modifier = Modifier.height(20.dp))
+                                    
+                                    Row(verticalAlignment = Alignment.Top) {
+                                        Text(text = "📝", fontSize = 16.sp)
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = "YOUR REFLECTION",
+                                                color = AccentPrimary,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Black,
+                                                letterSpacing = 1.sp
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = note,
+                                                color = TextPrimary,
+                                                fontSize = 15.sp,
+                                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                                lineHeight = 22.sp
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
-                        
+                    }
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(32.dp))
+                        Text(
+                            text = "Today's habits",
+                            color = TextPrimary,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
@@ -220,21 +204,31 @@ fun DashboardScreen(
                                 }
                             }
                         }
-                    }
+                    } else {
+                        // Expansion logic
+                        val visibleHabits = if (isExpanded) habitsWithStatus else habitsWithStatus.take(1)
+                        
+                        items(visibleHabits, key = { it.habit.id }) { item ->
+                            DashboardHabitCard(
+                                habit = item.habit,
+                                isCompleted = item.isCompletedToday,
+                                loggedAt = item.loggedAt,
+                                onToggle = { viewModel.toggleHabitCompletion(item.habit) },
+                                onRemove = { viewModel.removeHabitProgress(item.habit) }
+                            )
+                        }
 
-                    items(
-                        items = habitsWithStatus,
-                        key = { it.habit.id }
-                    ) { item ->
-                        HabitCard(
-                            habit = item.habit,
-                            isCompletedToday = item.isCompletedToday,
-                            isSyncing = item.isSyncing,
-                            isOverdue = item.isOverdue,
-                            onToggleComplete = { viewModel.toggleHabitCompletion(item.habit) },
-                            onRemoveProgress = { viewModel.removeHabitProgress(item.habit) },
-                            onClick = { onNavigateToDetail(item.habit.id) }
-                        )
+                        if (!isExpanded && habitsWithStatus.size > 1) {
+                            item {
+                                TextButton(
+                                    onClick = { isExpanded = true },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.textButtonColors(contentColor = AccentPrimary)
+                                ) {
+                                    Text("Show more", fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
                     }
                     
                     item {
@@ -243,15 +237,5 @@ fun DashboardScreen(
                 }
             }
         }
-    }
-}
-
-private fun formatRelativeTime(time: Instant): String {
-    val duration = Duration.between(time, Instant.now())
-    return when {
-        duration.toMinutes() < 1 -> "just now"
-        duration.toMinutes() < 60 -> "${duration.toMinutes()}m ago"
-        duration.toHours() < 24 -> "${duration.toHours()}h ago"
-        else -> "today"
     }
 }

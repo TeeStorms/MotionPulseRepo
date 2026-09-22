@@ -26,6 +26,9 @@ class MoodViewModel(
     private val _saveError = MutableStateFlow<String?>(null)
     val saveError: StateFlow<String?> = _saveError.asStateFlow()
 
+    private val _saveSuccess = MutableSharedFlow<Unit>()
+    val saveSuccess: SharedFlow<Unit> = _saveSuccess.asSharedFlow()
+
     val todayMood: StateFlow<MoodEntity?> = db.moodDao()
         .getMoodFlowForDate(userId, LocalDate.now())
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
@@ -70,6 +73,7 @@ class MoodViewModel(
             try {
                 db.moodDao().insertOrUpdateMood(mood)
                 moodRepository.saveMood(userId, mood)
+                _saveSuccess.emit(Unit)
             } catch (e: Exception) {
                 _saveError.value = "Failed to sync mood. Saved locally."
             } finally {
