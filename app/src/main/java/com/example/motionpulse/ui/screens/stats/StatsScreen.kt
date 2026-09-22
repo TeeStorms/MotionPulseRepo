@@ -16,7 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.motionpulse.ui.components.MotionPulseBottomNav
-import com.example.motionpulse.ui.screens.dashboard.components.DashboardHeader
+import com.example.motionpulse.ui.screens.dashboard.components.MotionPulseHeader
 import com.example.motionpulse.ui.screens.stats.components.*
 import com.example.motionpulse.ui.theme.*
 import com.example.motionpulse.ui.viewmodels.StatsViewMode
@@ -34,6 +34,7 @@ fun StatsScreen(
     val userProfile by viewModel.userProfile.collectAsState()
     val summaryStats by viewModel.summaryStats.collectAsState()
     val habitConsistencyStats by viewModel.habitConsistencyStats.collectAsState()
+    val todayMood by viewModel.todayMood.collectAsState()
     val viewMode by viewModel.viewMode.collectAsState()
     
     val snackbarHostState = remember { SnackbarHostState() }
@@ -67,11 +68,9 @@ fun StatsScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            DashboardHeader(
-                displayName = userProfile?.displayName ?: "User",
-                journeyDay = userProfile?.createdAt?.let { 
-                    ChronoUnit.DAYS.between(it.atZone(ZoneId.systemDefault()).toLocalDate(), LocalDate.now()).toInt() + 1
-                } ?: 1
+            MotionPulseHeader(
+                title = "Your Rhythm",
+                todayMood = todayMood
             )
 
             LazyColumn(
@@ -121,16 +120,18 @@ fun StatsScreen(
 
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    val correlationData by viewModel.correlationData.collectAsState()
-                    correlationData?.let { data ->
-                        MoodHabitCorrelationCard(
-                            dailyMoods = data.dailyMoods,
-                            dailyCompletions = data.dailyCompletions
-                        )
-                        InsightCard(insight = data.insight)
-                        data.bestDay?.let { best ->
-                            BestDayCard(bestDay = best)
-                        }
+                    val correlationData by viewModel.weeklyCorrelationData.collectAsState()
+                    val insight by viewModel.correlationInsight.collectAsState()
+                    val bestDay by viewModel.bestDayInfo.collectAsState()
+
+                    MoodHabitsGraphCard(data = correlationData)
+                    
+                    if (insight.isNotBlank()) {
+                        InsightCard(insight = insight)
+                    }
+                    
+                    bestDay?.let {
+                        BestDayCard(bestDay = it)
                     }
 
                     Spacer(modifier = Modifier.height(32.dp))

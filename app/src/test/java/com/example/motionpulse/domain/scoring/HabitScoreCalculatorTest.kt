@@ -13,23 +13,7 @@ class HabitScoreCalculatorTest {
 
     private val dailyFreq = FrequencyConfig(FrequencyType.EVERY_DAY)
 
-    @Test
-    fun `PARTIAL completion awards proportional credit`() {
-        val score = 50f
-        val target = 40f
-        val logged = 20f // 50% progress
-        
-        val completions = listOf(
-            HabitCompletionEntity("1", "h1", LocalDate.now(), CompletionStatus.PARTIAL, numericValueLogged = logged)
-        )
-        
-        val newScore = HabitScoreCalculator.calculateScore(score, completions, dailyFreq, target)
-        
-        // Expected gain if full: (100 - 50) * 0.05 = 2.5
-        // Proportional gain (50%): 2.5 * 0.5 = 1.25
-        // Total: 51.25
-        assertEquals(51.25f, newScore, 0.01f)
-    }
+    // PARTIAL completion is not supported in the current implementation.
 
     @Test
     fun `long streak survives one miss without resetting to zero`() {

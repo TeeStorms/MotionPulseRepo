@@ -10,7 +10,9 @@ import com.example.motionpulse.data.local.entity.HabitEntity
 import com.example.motionpulse.data.local.entity.UserProfileEntity
 import com.example.motionpulse.data.repository.AuthRepository
 import com.example.motionpulse.data.repository.HabitRepository
+import com.example.motionpulse.domain.models.DayMoodHabitData
 import com.example.motionpulse.domain.models.FrequencyConfig
+import com.example.motionpulse.domain.models.WeeklyRhythmUiState
 import com.example.motionpulse.domain.scoring.GamificationEngine
 import com.example.motionpulse.domain.scoring.HabitScoreCalculator
 import com.example.motionpulse.domain.scoring.StreakCalculator
@@ -62,6 +64,10 @@ class StatsViewModel(
 
     val userProfile: StateFlow<UserProfileEntity?> = db.userProfileDao()
         .getProfile(userId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val todayMood: StateFlow<com.example.motionpulse.data.local.entity.MoodEntity?> = db.moodDao()
+        .getMoodFlowForDate(userId, LocalDate.now())
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val summaryStats: StateFlow<SummaryStats> = db.habitDao().getHabitsForUser(userId)
@@ -138,7 +144,7 @@ class StatsViewModel(
         .catch { emit(SummaryStats()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SummaryStats())
 
-    val correlationData: StateFlow<CorrelationData?> = combine(
+    private val weeklyRawDataFlow = combine(
         db.moodDao().getMoodsForDateRange(
             userId, 
             LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)),
@@ -147,43 +153,64 @@ class StatsViewModel(
         db.habitDao().getHabitsForUser(userId),
         db.habitCompletionDao().getAllCompletionsFlow()
     ) { moods, habits, completions ->
+        Triple(moods, habits, completions)
+    }
+
+    val weeklyCorrelationData: StateFlow<com.example.motionpulse.domain.stats.WeeklyCorrelationData> = weeklyRawDataFlow.map { (moods, habits, completions) ->
         val today = LocalDate.now()
         val startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-        val weekDates = (0..6).map { startOfWeek.plusDays(it.toLong()) }
         
-        // 1. Line chart data (Mood 1-5 per day)
-        val dailyMoods = weekDates.map { date ->
-            moods.find { it.date == date }?.moodLevel
+        val days = (0..6).map { i ->
+            val date = startOfWeek.plusDays(i.toLong())
+            val mood = moods.find { it.date == date }
+            
+            val habitCompletions = habits.filter { 
+                FrequencyConfig.decodeSafe(it.frequencyConfig).isScheduled(date) 
+            }.map { habit ->
+                completions.any { it.habitId == habit.id && it.date == date && it.status == CompletionStatus.COMPLETED }
+            }
+            
+            com.example.motionpulse.domain.stats.DayData(
+                date = date,
+                moodLevel = mood?.moodLevel,
+                habitCompletions = habitCompletions
+            )
         }
+        com.example.motionpulse.domain.stats.WeeklyCorrelationData(days)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.example.motionpulse.domain.stats.WeeklyCorrelationData())
 
-        // 2. Dot row data (Habit completion count per day)
-        val dailyCompletions = weekDates.map { date ->
-            completions.count { it.date == date && it.status == CompletionStatus.COMPLETED }
-        }
-
-        // 3. Insight
-        val insight = com.example.motionpulse.domain.scoring.MoodHabitInsightGenerator.generateInsight(
+    val correlationInsight: StateFlow<String> = weeklyRawDataFlow.map { (moods, habits, completions) ->
+        com.example.motionpulse.domain.scoring.MoodHabitInsightGenerator.generateInsight(
             moods, habits, completions
         )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
-        // 4. Best Day Calculation
-        // Definition: Highest mood score + 100% habits done
-        val bestDay = weekDates.mapNotNull { date ->
-            val mood = moods.find { it.date == date } ?: return@mapNotNull null
-            val scheduledCount = habits.count { 
-                com.example.motionpulse.domain.models.FrequencyConfig.decodeSafe(it.frequencyConfig).isScheduled(date) 
-            }
-            val doneCount = completions.count { it.date == date && it.status == CompletionStatus.COMPLETED }
-            
-            if (scheduledCount > 0 && doneCount >= scheduledCount) {
-                BestDayInfo(date, mood.moodLevel, doneCount, scheduledCount)
-            } else null
-        }.maxByOrNull { moodToScore(it.moodLevel) }
+    val bestDayInfo: StateFlow<BestDayInfo?> = weeklyCorrelationData.map { state ->
+        state.days.filter { it.moodLevel != null }.maxByOrNull { day ->
+            val moodScore = moodToScore(day.moodLevel!!)
+            val totalHabits = day.habitCompletions.size
+            val habitsDone = day.habitCompletions.count { it }
+            val habitRatio = if (totalHabits > 0) habitsDone.toFloat() / totalHabits else 0f
+            moodScore + (habitRatio * 5)
+        }?.let { bestDayData ->
+            BestDayInfo(
+                date = bestDayData.date,
+                moodLevel = bestDayData.moodLevel!!,
+                habitsDone = bestDayData.habitCompletions.count { it },
+                totalHabits = maxOf(1, bestDayData.habitCompletions.size)
+            )
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-        CorrelationData(dailyMoods, dailyCompletions, insight, bestDay) as CorrelationData?
+    private fun scoreToMoodLevel(score: Int): com.example.motionpulse.data.local.entity.MoodLevel {
+        return when (score) {
+            1 -> com.example.motionpulse.data.local.entity.MoodLevel.DRAINED
+            2 -> com.example.motionpulse.data.local.entity.MoodLevel.LOW
+            3 -> com.example.motionpulse.data.local.entity.MoodLevel.STEADY
+            4 -> com.example.motionpulse.data.local.entity.MoodLevel.GOOD
+            else -> com.example.motionpulse.data.local.entity.MoodLevel.ENERGIZED
+        }
     }
-    .catch { emit(null) }
-    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private fun moodToScore(level: com.example.motionpulse.data.local.entity.MoodLevel): Int = when (level) {
         com.example.motionpulse.data.local.entity.MoodLevel.DRAINED -> 1
@@ -388,13 +415,6 @@ data class DayStatus(
     val date: LocalDate,
     val status: CompletionStatus,
     val valueLogged: Float? = null
-)
-
-data class CorrelationData(
-    val dailyMoods: List<com.example.motionpulse.data.local.entity.MoodLevel?>,
-    val dailyCompletions: List<Int>,
-    val insight: String,
-    val bestDay: BestDayInfo?
 )
 
 data class BestDayInfo(

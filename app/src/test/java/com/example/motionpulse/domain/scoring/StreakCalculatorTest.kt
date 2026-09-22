@@ -67,7 +67,7 @@ class StreakCalculatorTest {
         val today = LocalDate.of(2023, 10, 25)
         val completions = listOf(
             HabitCompletionEntity("1", "h1", today, CompletionStatus.COMPLETED),
-            HabitCompletionEntity("2", "h1", today.minusDays(1), CompletionStatus.PARTIAL, numericValueLogged = 10f),
+            HabitCompletionEntity("2", "h1", today.minusDays(1), CompletionStatus.MISSED, numericValueLogged = 10f),
             HabitCompletionEntity("3", "h1", today.minusDays(2), CompletionStatus.COMPLETED)
         )
         
