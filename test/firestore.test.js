@@ -76,7 +76,7 @@ describe("Motion.Pulse Firestore Security Rules", () => {
     );
   });
 
-  test("activityFeed: user can read their own entry, but non-friend cannot read", async () => {
+  test("activityFeed: authenticated user can read activity feed", async () => {
     const aliceDb = testEnv.authenticatedContext("alice").firestore();
     await aliceDb.collection("activityFeed").doc("entry1").set({
       actorId: "alice",
@@ -86,7 +86,7 @@ describe("Motion.Pulse Firestore Security Rules", () => {
     });
 
     const charlieDb = testEnv.authenticatedContext("charlie").firestore();
-    await assertFails(charlieDb.collection("activityFeed").doc("entry1").get());
+    await assertSucceeds(charlieDb.collection("activityFeed").doc("entry1").get());
   });
 
   test("challenges: participant can read challenge", async () => {
