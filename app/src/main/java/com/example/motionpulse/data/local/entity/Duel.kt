@@ -5,8 +5,9 @@ data class Duel(
     val habitType: String = "",
     val startDate: String = "", // ISO date
     val durationDays: Int = 7,
+    val endDate: String = "", // ISO date
     val participants: List<String> = emptyList(),
     val scores: Map<String, Int> = emptyMap(), // userId -> completionCount
     val winnerId: String? = null,
-    val status: String = "ACTIVE" // ACTIVE, COMPLETED
+    val status: String = "ACTIVE" // ACTIVE, COMPLETED, CANCELLED
 )

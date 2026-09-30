@@ -9,7 +9,9 @@ import com.example.motionpulse.data.local.entity.Challenge
 import com.example.motionpulse.data.local.entity.CommunityNotification
 import com.example.motionpulse.data.local.entity.Duel
 import com.example.motionpulse.data.local.entity.UserProfileEntity
+import com.example.motionpulse.data.repository.CommunityPreferences
 import com.example.motionpulse.data.repository.CommunityRepository
+import com.example.motionpulse.domain.models.UiState
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -20,46 +22,292 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 class CommunityViewModel(
     private val db: AppDatabase,
     private val userId: String,
-    private val communityRepository: CommunityRepository = CommunityRepository()
+    private val communityRepository: CommunityRepository = CommunityRepository(),
+    private val communityPreferences: CommunityPreferences? = null
 ) : ViewModel() {
+
+    val hasSeenCommunityTipState: StateFlow<Boolean> = communityPreferences?.hasSeenCommunityTipFlow
+        ?.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+        ?: MutableStateFlow(true).asStateFlow()
+
+    fun dismissCommunityTip() {
+        viewModelScope.launch {
+            communityPreferences?.setCommunityTipSeen(true)
+        }
+    }
 
     private val _userProfile = MutableStateFlow<UserProfileEntity?>(null)
     val userProfile: StateFlow<UserProfileEntity?> = _userProfile.asStateFlow()
 
-    val feed: StateFlow<List<ActivityFeedEntry>> = communityRepository.getActivityFeed()
-        .catch { emit(emptyList()) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    private val retryTrigger = MutableStateFlow(0)
 
-    val notifications: StateFlow<List<CommunityNotification>> = communityRepository.getNotifications(userId)
-        .catch { emit(emptyList()) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    fun retry() {
+        retryTrigger.value += 1
+    }
 
-    val challenges: StateFlow<List<Challenge>> = communityRepository.getChallenges()
-        .catch { emit(emptyList()) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // Local tracking of users nudged today
+    private val _nudgedUsersToday = MutableStateFlow<Set<String>>(emptySet())
+    val nudgedUsersToday: StateFlow<Set<String>> = _nudgedUsersToday.asStateFlow()
 
-    val duels: StateFlow<List<Duel>> = communityRepository.getDuels(userId)
-        .catch { emit(emptyList()) }
+    // Local tracking of muted users
+    private val _mutedUserIds = MutableStateFlow<Set<String>>(emptySet())
+    val mutedUserIds: StateFlow<Set<String>> = _mutedUserIds.asStateFlow()
+
+    // Honest delivery feedback message
+    private val _nudgeFeedback = MutableStateFlow<String?>(null)
+    val nudgeFeedback: StateFlow<String?> = _nudgeFeedback.asStateFlow()
+
+    fun clearNudgeFeedback() {
+        _nudgeFeedback.value = null
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val blockedUserIdsState: StateFlow<List<String>> = retryTrigger
+        .flatMapLatest { communityRepository.getBlockedUserIds(userId) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val friends: StateFlow<List<UserProfileEntity>> = db.friendDao().getActiveFriendsForUser(userId)
-        .map { list -> list.map { it.friendUid } }
-        .flatMapLatest { ids -> communityRepository.getFriendsProfiles(ids) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val feedState: StateFlow<UiState<List<ActivityFeedEntry>>> = retryTrigger
+        .flatMapLatest { communityRepository.getActivityFeed(userId) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
 
-    val leaderboard: StateFlow<List<UserProfileEntity>> = friends
-        .map { list -> 
-            val all = list + listOfNotNull(_userProfile.value)
-            all.sortedByDescending { computeWeeklyXp(it) }
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val notificationsState: StateFlow<UiState<List<CommunityNotification>>> = combine(
+        retryTrigger.flatMapLatest { communityRepository.getNotifications(userId) },
+        _mutedUserIds
+    ) { state, mutedIds ->
+        if (state is UiState.Success) {
+            val filtered = state.data.filterNot { it.type == "NUDGE" && it.senderId in mutedIds }
+            if (filtered.isEmpty()) UiState.Empty else UiState.Success(filtered)
+        } else state
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val challengesState: StateFlow<UiState<List<Challenge>>> = retryTrigger
+        .flatMapLatest { communityRepository.getChallenges(userId) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val duelsState: StateFlow<UiState<List<Duel>>> = retryTrigger
+        .flatMapLatest { communityRepository.getDuels(userId) }
+        .onEach { state ->
+            if (state is UiState.Success) {
+                state.data.filter { it.status == "ACTIVE" }.forEach { duel ->
+                    try {
+                        val start = LocalDate.parse(duel.startDate)
+                        val end = start.plusDays(duel.durationDays.toLong())
+                        if (LocalDate.now().isAfter(end)) {
+                            resolveDuel(duel)
+                        }
+                    } catch (e: Exception) {}
+                }
+            }
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val friendsState: StateFlow<UiState<List<UserProfileEntity>>> = retryTrigger
+        .flatMapLatest {
+            db.friendDao().getActiveFriendsForUser(userId)
+                .map { list -> list.map { if (it.requesterUid == userId) it.recipientUid else it.requesterUid } }
+                .flatMapLatest { ids -> communityRepository.getFriendsProfiles(ids) }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val incomingRequestsState: StateFlow<UiState<List<com.example.motionpulse.data.local.entity.FriendEntity>>> = retryTrigger
+        .flatMapLatest { communityRepository.getFriendRequests(userId) }
+        .map { state ->
+            if (state is UiState.Success) {
+                val filtered = state.data.filter { it.recipientUid == userId && it.status == com.example.motionpulse.data.local.entity.FriendStatus.PENDING }
+                if (filtered.isEmpty()) UiState.Empty else UiState.Success(filtered)
+            } else state
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val sentRequestsState: StateFlow<UiState<List<com.example.motionpulse.data.local.entity.FriendEntity>>> = retryTrigger
+        .flatMapLatest { communityRepository.getFriendRequests(userId) }
+        .map { state ->
+            if (state is UiState.Success) {
+                val filtered = state.data.filter { it.requesterUid == userId && it.status == com.example.motionpulse.data.local.entity.FriendStatus.PENDING }
+                if (filtered.isEmpty()) UiState.Empty else UiState.Success(filtered)
+            } else state
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
+
+    private val _searchResult = MutableStateFlow<UserProfileEntity?>(null)
+    val searchResult: StateFlow<UserProfileEntity?> = _searchResult.asStateFlow()
+
+    private val _searchError = MutableStateFlow<String?>(null)
+    val searchError: StateFlow<String?> = _searchError.asStateFlow()
+
+    enum class LeaderboardMetric { WEEKLY_XP, STREAK, LEVEL }
+    private val _leaderboardMetric = MutableStateFlow(LeaderboardMetric.WEEKLY_XP)
+    val leaderboardMetric: StateFlow<LeaderboardMetric> = _leaderboardMetric.asStateFlow()
+
+    val leaderboardState: StateFlow<UiState<List<UserProfileEntity>>> = combine(friendsState, _leaderboardMetric) { state, metric ->
+        when (state) {
+            is UiState.Success -> {
+                val all = state.data + listOfNotNull(_userProfile.value)
+                val sorted = when (metric) {
+                    LeaderboardMetric.WEEKLY_XP -> all.sortedByDescending { computeWeeklyXp(it) }
+                    LeaderboardMetric.STREAK -> all.sortedByDescending { it.currentStreak }
+                    LeaderboardMetric.LEVEL -> all.sortedByDescending { it.currentLevel }
+                }
+                UiState.Success(sorted)
+            }
+            is UiState.Empty -> {
+                val selfOnly = listOfNotNull(_userProfile.value)
+                if (selfOnly.isEmpty()) UiState.Empty else UiState.Success(selfOnly)
+            }
+            is UiState.Loading -> UiState.Loading
+            is UiState.Error -> state
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
+
+    fun setLeaderboardMetric(metric: LeaderboardMetric) {
+        _leaderboardMetric.value = metric
+    }
+
+    private suspend fun resolveDuel(duel: Duel) {
+        communityRepository.resolveAndCompleteDuel(duel.id)
+    }
+
+    fun startDuel(friendId: String, habitType: String) {
+        val duelId = java.util.UUID.randomUUID().toString()
+        val startDate = LocalDate.now()
+        val duration = 7
+        val endDate = startDate.plusDays(duration.toLong()).toString()
+        val newDuel = Duel(
+            id = duelId,
+            habitType = habitType,
+            startDate = startDate.toString(),
+            durationDays = duration,
+            endDate = endDate,
+            participants = listOf(userId, friendId),
+            scores = mapOf(userId to 0, friendId to 0),
+            status = "ACTIVE"
+        )
+        viewModelScope.launch {
+            communityRepository.createDuel(newDuel)
+            _userProfile.value?.let {
+                communityRepository.sendDuelInvite(friendId, userId, it.displayName, habitType, duelId)
+            }
+        }
+    }
 
     init {
         viewModelScope.launch {
             db.userProfileDao().getProfile(userId).collect {
                 _userProfile.value = it
             }
+        }
+
+        // Sync Firestore Friend Requests to Local DB
+        viewModelScope.launch {
+            communityRepository.getFriendRequests(userId).collect { state ->
+                if (state is UiState.Success) {
+                    for (req in state.data) {
+                        db.friendDao().insertFriend(req)
+                    }
+                    val localAll = db.friendDao().getAllFriendships(userId).first()
+                    val remoteIds = state.data.map { it.id }.toSet()
+                    localAll.filter { it.id !in remoteIds }.forEach { 
+                        db.friendDao().deleteFriend(it)
+                    }
+                }
+            }
+        }
+    }
+
+    private val searchTimestamps = mutableListOf<Long>()
+
+    fun searchByCode(code: String) {
+        val now = System.currentTimeMillis()
+        searchTimestamps.removeAll { now - it > 60_000L }
+        if (searchTimestamps.size >= 10) {
+            _searchError.value = "Too many search attempts. Try again in a moment."
+            _searchResult.value = null
+            return
+        }
+        searchTimestamps.add(now)
+
+        viewModelScope.launch {
+            _searchError.value = null
+            _searchResult.value = null
+            try {
+                val result = communityRepository.findUserByFriendCode(code)
+                if (result == null) {
+                    _searchError.value = "No account found with that code."
+                } else if (result.uid == userId) {
+                    _searchError.value = "You cannot add yourself"
+                } else {
+                    _searchResult.value = result
+                }
+            } catch (e: Exception) {
+                _searchError.value = "Search failed"
+            }
+        }
+    }
+
+    fun sendFriendRequest(recipientId: String, recipientName: String? = null) {
+        viewModelScope.launch {
+            _userProfile.value?.let {
+                try {
+                    communityRepository.sendFriendRequest(userId, it.displayName, recipientId)
+                    _searchResult.value = null
+                    val displayName = recipientName ?: searchResult.value?.displayName ?: "user"
+                    _nudgeFeedback.value = "Request sent to $displayName"
+                } catch (e: Exception) {
+                    _searchError.value = e.message ?: "Failed to send friend request"
+                }
+            }
+        }
+    }
+
+    fun cancelSentRequest(requestId: String) {
+        viewModelScope.launch {
+            try {
+                communityRepository.cancelFriendRequest(requestId)
+                _nudgeFeedback.value = "Friend request cancelled"
+            } catch (e: Exception) {
+                _nudgeFeedback.value = e.message ?: "Failed to cancel request"
+            }
+        }
+    }
+
+    fun respondToRequest(requestId: String, otherUserId: String, accept: Boolean) {
+        viewModelScope.launch {
+            _userProfile.value?.let {
+                communityRepository.respondToFriendRequest(requestId, userId, it.displayName, otherUserId, accept)
+            }
+        }
+    }
+
+    fun unfriend(otherUserId: String) {
+        viewModelScope.launch {
+            communityRepository.unfriendAtomic(userId, otherUserId, db)
+        }
+    }
+
+    fun muteUser(targetUserId: String) {
+        _mutedUserIds.value = _mutedUserIds.value + targetUserId
+    }
+
+    fun unmuteUser(targetUserId: String) {
+        _mutedUserIds.value = _mutedUserIds.value - targetUserId
+    }
+
+    fun blockUser(targetUserId: String) {
+        viewModelScope.launch {
+            communityRepository.blockUser(userId, targetUserId)
+        }
+    }
+
+    fun unblockUser(targetUserId: String) {
+        viewModelScope.launch {
+            communityRepository.unblockUser(userId, targetUserId)
         }
     }
 
@@ -77,9 +325,13 @@ class CommunityViewModel(
     }
 
     fun sendNudge(targetUserId: String) {
+        if (targetUserId in _nudgedUsersToday.value) return
+        
         viewModelScope.launch {
             _userProfile.value?.let {
+                _nudgedUsersToday.value = _nudgedUsersToday.value + targetUserId
                 communityRepository.sendNudge(targetUserId, userId, it.displayName)
+                _nudgeFeedback.value = "Nudge sent! Your friend will see it next time they open Motion.Pulse."
             }
         }
     }
@@ -96,9 +348,14 @@ class CommunityViewModel(
         }
     }
 
-    class Factory(private val db: AppDatabase, private val userId: String) : ViewModelProvider.Factory {
+    class Factory(
+        private val db: AppDatabase,
+        private val userId: String,
+        private val context: android.content.Context? = null
+    ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return CommunityViewModel(db, userId) as T
+            val prefs = context?.let { CommunityPreferences(it.applicationContext) }
+            return CommunityViewModel(db, userId, CommunityRepository(), prefs) as T
         }
     }
 }
