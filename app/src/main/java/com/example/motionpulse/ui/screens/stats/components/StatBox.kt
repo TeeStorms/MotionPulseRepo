@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.motionpulse.ui.theme.*
@@ -22,6 +23,14 @@ fun StatBox(
     trend: Int? = null,
     modifier: Modifier = Modifier
 ) {
+    // Step-down font sizing based on value length to prevent clipping on small screens
+    val valueFontSize = when {
+        value.length > 7 -> 16.sp
+        value.length > 5 -> 18.sp
+        value.length > 4 -> 20.sp
+        else -> 24.sp
+    }
+
     Card(
         modifier = modifier
             .border(1.dp, CardBorder, RoundedCornerShape(16.dp)),
@@ -30,27 +39,35 @@ fun StatBox(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .wrapContentHeight()
                 .padding(16.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.Start
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Text(
                     text = value,
                     color = CardBorderAlt,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
+                    fontSize = valueFontSize,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
                 )
                 
                 if (trend != null && trend != 0) {
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     val isUp = trend > 0
                     Text(
                         text = if (isUp) "↑" else "↓",
                         color = if (isUp) AccentPrimary else Color.Gray,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Black
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Black,
+                        maxLines = 1
                     )
                 }
             }
@@ -58,8 +75,10 @@ fun StatBox(
             Text(
                 text = label,
                 color = TextSecondary,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }

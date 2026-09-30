@@ -5,26 +5,15 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.motionpulse.data.local.AppDatabase
 import com.example.motionpulse.data.local.entity.CompletionStatus
-import com.example.motionpulse.data.local.entity.HabitCompletionEntity
-import com.example.motionpulse.data.local.entity.HabitEntity
 import com.example.motionpulse.data.local.entity.UserProfileEntity
 import com.example.motionpulse.data.repository.AuthRepository
 import com.example.motionpulse.data.repository.HabitRepository
-import com.example.motionpulse.domain.models.DayMoodHabitData
 import com.example.motionpulse.domain.models.FrequencyConfig
-import com.example.motionpulse.domain.models.WeeklyRhythmUiState
-import com.example.motionpulse.domain.scoring.GamificationEngine
-import com.example.motionpulse.domain.scoring.HabitScoreCalculator
-import com.example.motionpulse.domain.scoring.StreakCalculator
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
-import java.time.Instant
 import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
-import java.util.UUID
-
-enum class StatsViewMode { WEEK, MONTH }
 
 class StatsViewModel(
     private val db: AppDatabase,
@@ -32,9 +21,6 @@ class StatsViewModel(
     private val habitRepository: HabitRepository = HabitRepository(db),
     private val authRepository: AuthRepository = AuthRepository()
 ) : ViewModel() {
-
-    private val _viewMode = MutableStateFlow(StatsViewMode.WEEK)
-    val viewMode: StateFlow<StatsViewMode> = _viewMode.asStateFlow()
 
     private val _celebrationEvent = MutableSharedFlow<Unit>()
     val celebrationEvent: SharedFlow<Unit> = _celebrationEvent.asSharedFlow()
@@ -233,162 +219,6 @@ class StatsViewModel(
             .launchIn(viewModelScope)
     }
 
-    val habitConsistencyStats: StateFlow<List<HabitConsistencyStatus>> = combine(
-        db.habitDao().getHabitsForUser(userId),
-        db.habitCompletionDao().getAllCompletionsFlow(),
-        _viewMode
-    ) { habits, completions, mode ->
-        val today = LocalDate.now()
-        val habitCompletionsMap = completions.groupBy { it.habitId }
-        val dateRange = if (mode == StatsViewMode.WEEK) {
-            val startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-            (0..6).map { startOfWeek.plusDays(it.toLong()) }
-        } else {
-            val startOfMonth = today.with(TemporalAdjusters.firstDayOfMonth())
-            (0 until today.lengthOfMonth()).map { startOfMonth.plusDays(it.toLong()) }
-        }
-
-        habits.map { habit ->
-            val habitCompletions = habitCompletionsMap[habit.id] ?: emptyList()
-            val gridStatus = dateRange.map { date ->
-                val completion = habitCompletions.find { it.date == date }
-                
-                DayStatus(
-                    date = date,
-                    status = completion?.status ?: CompletionStatus.MISSED,
-                    valueLogged = completion?.numericValueLogged
-                )
-            }
-            
-            HabitConsistencyStatus(
-                habit = habit,
-                dayStatuses = gridStatus,
-                completedCount = gridStatus.count { it.status == CompletionStatus.COMPLETED }
-            )
-        }
-    }
-    .catch { emit(emptyList()) }
-    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
-
-    fun setViewMode(mode: StatsViewMode) {
-        _viewMode.value = mode
-    }
-
-    fun logHabitProgress(habit: HabitEntity, date: LocalDate = LocalDate.now()) {
-        viewModelScope.launch {
-            try {
-                val completionId = UUID.randomUUID().toString()
-                val completion = HabitCompletionEntity(
-                    id = completionId,
-                    habitId = habit.id,
-                    date = date,
-                    status = CompletionStatus.COMPLETED,
-                    numericValueLogged = habit.numericTarget,
-                    updatedAt = Instant.now()
-                )
-                db.habitCompletionDao().insertCompletion(completion)
-
-                // Full recalculation
-                val allCompletions = db.habitCompletionDao().getAllCompletionsForHabit(habit.id).first()
-                val freqConfig = FrequencyConfig.decodeSafe(habit.frequencyConfig)
-                
-                val newScore = HabitScoreCalculator.calculateScore(0f, allCompletions, freqConfig, habit.numericTarget)
-                val newCurrentStreak = StreakCalculator.calculateCurrentStreak(allCompletions, freqConfig)
-                val newLongestStreak = maxOf(habit.longestStreak, newCurrentStreak)
-
-                val updatedHabit = habit.copy(
-                    habitStrengthScore = newScore,
-                    currentStreak = newCurrentStreak,
-                    longestStreak = newLongestStreak,
-                    updatedAt = Instant.now()
-                )
-                db.habitDao().updateHabit(updatedHabit)
-
-                if (userProfile.value != null) {
-                    val isNewPb = newCurrentStreak > habit.longestStreak
-                    val xpResult = GamificationEngine.calculateXpGain(userProfile.value!!.totalAuraXp, isNewPb)
-                    db.userProfileDao().updateProfile(userProfile.value!!.copy(
-                        totalAuraXp = xpResult.newTotalXp,
-                        currentLevel = xpResult.newLevel
-                    ))
-
-                    val currentBadges = db.badgeDao().getBadgesForUser(userId).first().map { it.badgeType }.toSet()
-                    val totalHabits = db.habitDao().getAllActiveHabits().first().size
-                    
-                    val newBadges = GamificationEngine.checkBadgeUnlocks(
-                        userId = userId,
-                        currentStreak = newCurrentStreak,
-                        longestStreak = newLongestStreak,
-                        totalHabitsCount = totalHabits,
-                        hasFriends = false,
-                        alreadyUnlockedBadges = currentBadges
-                    )
-                    
-                    for (badgeType in newBadges) {
-                        db.badgeDao().insertBadge(com.example.motionpulse.data.local.entity.BadgeEntity(
-                            id = UUID.randomUUID().toString(),
-                            userId = userId,
-                            badgeType = badgeType,
-                            unlockedAt = Instant.now(),
-                            triggeredByCompletionId = completionId
-                        ))
-                    }
-                }
-
-                habitRepository.saveCompletion(userId, completion)
-                habitRepository.saveHabit(userId, updatedHabit)
-            } catch (e: Exception) {}
-        }
-    }
-
-    fun removeHabitProgress(habit: HabitEntity, date: LocalDate = LocalDate.now()) {
-        viewModelScope.launch {
-            try {
-                val completion = db.habitCompletionDao().getAllCompletionsFlow().first().find { it.habitId == habit.id && it.date == date }
-                if (completion != null) {
-                    // Revoke Badges
-                    val badges = db.badgeDao().getBadgesForUser(userId).first().filter { it.triggeredByCompletionId == completion.id }
-                    for (badge in badges) {
-                        db.badgeDao().deleteBadge(badge)
-                    }
-                    
-                    // Deduct XP
-                    val allCompletionsBefore = db.habitCompletionDao().getAllCompletionsForHabit(habit.id).first()
-                    val freqConfig = FrequencyConfig.decodeSafe(habit.frequencyConfig)
-                    val streakBefore = StreakCalculator.calculateCurrentStreak(allCompletionsBefore, freqConfig)
-                    
-                    db.habitCompletionDao().deleteCompletion(completion)
-                    habitRepository.deleteCompletion(userId, habit.id, date)
-                    
-                    val allCompletionsAfter = db.habitCompletionDao().getAllCompletionsForHabit(habit.id).first()
-                    val newScore = HabitScoreCalculator.calculateScore(0f, allCompletionsAfter, freqConfig, habit.numericTarget)
-                    val newCurrentStreak = StreakCalculator.calculateCurrentStreak(allCompletionsAfter, freqConfig)
-                    val newLongestStreak = StreakCalculator.calculateLongestStreak(allCompletionsAfter, freqConfig)
-                    
-                    val updatedHabit = habit.copy(
-                        habitStrengthScore = newScore,
-                        currentStreak = newCurrentStreak,
-                        longestStreak = newLongestStreak,
-                        updatedAt = Instant.now()
-                    )
-                    db.habitDao().updateHabit(updatedHabit)
-                    habitRepository.saveHabit(userId, updatedHabit)
-                    
-                    val profile = userProfile.value
-                    if (profile != null) {
-                        val isWasPb = streakBefore > habit.longestStreak
-                        val xpToDeduct = GamificationEngine.BASE_COMPLETION_XP + if (isWasPb) GamificationEngine.NEW_PERSONAL_BEST_BONUS else 0L
-                        val newTotalXp = maxOf(0, profile.totalAuraXp - xpToDeduct)
-                        db.userProfileDao().updateProfile(profile.copy(
-                            totalAuraXp = newTotalXp,
-                            currentLevel = (newTotalXp / 500L).toInt() + 1
-                        ))
-                    }
-                }
-            } catch (e: Exception) {}
-        }
-    }
-
     class Factory(private val db: AppDatabase, private val userId: String) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return StatsViewModel(db, userId) as T
@@ -403,18 +233,6 @@ data class SummaryStats(
     val totalCompleted: Int = 0,
     val weeklyPercent: Int = 0,
     val weeklyTrend: Int? = null
-)
-
-data class HabitConsistencyStatus(
-    val habit: HabitEntity,
-    val dayStatuses: List<DayStatus>,
-    val completedCount: Int
-)
-
-data class DayStatus(
-    val date: LocalDate,
-    val status: CompletionStatus,
-    val valueLogged: Float? = null
 )
 
 data class BestDayInfo(
