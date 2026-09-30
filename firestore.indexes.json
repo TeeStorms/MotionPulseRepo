@@ -4,13 +4,15 @@
       "collectionGroup": "activityFeed",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "visibleTo", "arrayConfig": "CONTAINS" },
         { "fieldPath": "timestamp", "order": "DESCENDING" }
       ]
     },
     {
-      "collectionGroup": "notifications",
-      "queryScope": "COLLECTION_GROUP",
+      "collectionGroup": "activityFeed",
+      "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "actorId", "order": "ASCENDING" },
         { "fieldPath": "timestamp", "order": "DESCENDING" }
       ]
     }
