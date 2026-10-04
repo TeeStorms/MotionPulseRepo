@@ -174,7 +174,7 @@ class CommunityViewModel(
         communityRepository.resolveAndCompleteDuel(duel.id)
     }
 
-    fun startDuel(friendId: String, habitType: String) {
+    fun startDuel(friendId: String, habitType: String, friendName: String? = null) {
         val duelId = java.util.UUID.randomUUID().toString()
         val startDate = LocalDate.now()
         val duration = 7
@@ -190,9 +190,15 @@ class CommunityViewModel(
             status = "ACTIVE"
         )
         viewModelScope.launch {
-            communityRepository.createDuel(newDuel)
-            _userProfile.value?.let {
-                communityRepository.sendDuelInvite(friendId, userId, it.displayName, habitType, duelId)
+            try {
+                communityRepository.createDuel(newDuel)
+                _userProfile.value?.let {
+                    communityRepository.sendDuelInvite(friendId, userId, it.displayName, habitType, duelId)
+                }
+                val name = friendName ?: "friend"
+                _nudgeFeedback.value = "Duel sent to $name!"
+            } catch (e: Exception) {
+                _nudgeFeedback.value = "Couldn't send challenge — please try again"
             }
         }
     }
