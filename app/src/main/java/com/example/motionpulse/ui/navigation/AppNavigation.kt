@@ -84,6 +84,19 @@ fun MainAppContent() {
         authViewModel.updateConnectivity(capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) != true)
     }
 
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = object : androidx.lifecycle.DefaultLifecycleObserver {
+            override fun onResume(owner: androidx.lifecycle.LifecycleOwner) {
+                authViewModel.checkAndRefreshTokenOnResume()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     // Simple DB provider
     val db = remember {
         Room.databaseBuilder(

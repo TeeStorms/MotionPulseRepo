@@ -19,6 +19,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
 
 class AuthViewModel(
@@ -266,6 +267,20 @@ class AuthViewModel(
 
     fun updateConnectivity(isOffline: Boolean) {
         _isOffline.value = isOffline
+    }
+
+    fun checkAndRefreshTokenOnResume() {
+        viewModelScope.launch {
+            val user = authRepository.getCurrentUser()
+            if (user != null) {
+                try {
+                    user.getIdToken(true).await()
+                    checkSession()
+                } catch (e: Exception) {
+                    android.util.Log.e("AuthViewModel", "Failed to refresh token on resume: ${e.message}")
+                }
+            }
+        }
     }
 
     private fun mapError(e: Exception, fallbackType: AuthErrorType = AuthErrorType.UNKNOWN) {
