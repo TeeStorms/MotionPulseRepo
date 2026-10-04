@@ -634,6 +634,65 @@ describe("Motion.Pulse Firestore Security Rules", () => {
     await assertFails(unauthDb.collection("activityFeed").doc("entry1").get());
   });
 
+  test("duels: accepted friends can create a duel, non-friends cannot", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const adminDb = context.firestore();
+      await adminDb.collection("friendRequests").doc("alice_bob").set({
+        requesterUid: "alice",
+        recipientUid: "bob",
+        participants: ["alice", "bob"],
+        status: "ACCEPTED"
+      });
+      await adminDb.terminate();
+    });
+
+    const aliceDb = testEnv.authenticatedContext("alice").firestore();
+    // Accepted friend duel creation succeeds
+    await assertSucceeds(
+      aliceDb.collection("duels").doc("duel_new_1").set({
+        id: "duel_new_1",
+        habitType: "Fitness and Health",
+        startDate: "2026-10-04",
+        durationDays: 7,
+        endDate: "2026-10-11",
+        participants: ["alice", "bob"],
+        scores: { alice: 0, bob: 0 },
+        winnerId: null,
+        status: "ACTIVE"
+      })
+    );
+
+    // Creating a duel with a non-friend (charlie) fails
+    await assertFails(
+      aliceDb.collection("duels").doc("duel_new_2").set({
+        id: "duel_new_2",
+        habitType: "Fitness and Health",
+        startDate: "2026-10-04",
+        durationDays: 7,
+        endDate: "2026-10-11",
+        participants: ["alice", "charlie"],
+        scores: { alice: 0, charlie: 0 },
+        winnerId: null,
+        status: "ACTIVE"
+      })
+    );
+
+    // Creating a duel where caller is NOT one of the participants fails
+    await assertFails(
+      aliceDb.collection("duels").doc("duel_new_3").set({
+        id: "duel_new_3",
+        habitType: "Fitness and Health",
+        startDate: "2026-10-04",
+        durationDays: 7,
+        endDate: "2026-10-11",
+        participants: ["bob", "charlie"],
+        scores: { bob: 0, charlie: 0 },
+        winnerId: null,
+        status: "ACTIVE"
+      })
+    );
+  });
+
   test("duels: resolving duel after endDate with correct winner succeeds, before endDate or wrong winner fails", async () => {
     await testEnv.withSecurityRulesDisabled(async (context) => {
       const adminDb = context.firestore();
