@@ -86,13 +86,50 @@ class ProfileViewModel(
     }
 
     /**
-     * Updates the user's preferred application language.
+     * Toggles whether milestone achievements are shared on the community feed.
+     */
+    fun toggleShareMilestones(enabled: Boolean) {
+        viewModelScope.launch {
+            authRepository.updateUserSetting("shareMilestonesWithFriends", enabled)
+            profileState.value.userProfile?.let {
+                db.userProfileDao().updateProfile(it.copy(shareMilestonesWithFriends = enabled))
+            }
+        }
+    }
+
+    /**
+     * Toggles whether specific habit titles are shown in community feed posts.
+     */
+    fun toggleShowHabitNames(enabled: Boolean) {
+        viewModelScope.launch {
+            authRepository.updateUserSetting("showHabitNamesInPosts", enabled)
+            profileState.value.userProfile?.let {
+                db.userProfileDao().updateProfile(it.copy(showHabitNamesInPosts = enabled))
+            }
+        }
+    }
+
+    /**
+     * Updates the user's preferred language setting.
      */
     fun changeLanguage(language: String) {
         viewModelScope.launch {
             authRepository.updateUserSetting("language", language)
             profileState.value.userProfile?.let {
                 db.userProfileDao().updateProfile(it.copy(language = language))
+            }
+        }
+    }
+
+    /**
+     * Resets the user's friend code by deleting the old friendCodes document and creating a new one.
+     */
+    fun resetFriendCode() {
+        viewModelScope.launch {
+            val currentCode = profileState.value.userProfile?.friendCode ?: ""
+            val newCode = authRepository.resetFriendCode(userId, currentCode)
+            profileState.value.userProfile?.let {
+                db.userProfileDao().updateProfile(it.copy(friendCode = newCode))
             }
         }
     }

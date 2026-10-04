@@ -17,5 +17,6 @@ data class ActivityFeedEntry(
     val timestamp: Long = System.currentTimeMillis(),
     val habitTitle: String? = null,
     val streakCount: Int? = null,
+    val visibleTo: List<String> = emptyList(), // actorId + accepted friend uids
     val reactions: Map<String, Boolean> = emptyMap() // userId -> hasReacted
 )

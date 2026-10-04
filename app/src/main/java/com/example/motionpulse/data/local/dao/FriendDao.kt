@@ -16,9 +16,9 @@ interface FriendDao {
     @Delete
     suspend fun deleteFriend(friend: FriendEntity)
 
-    @Query("SELECT * FROM friends WHERE ownerUid = :userId AND status = 'ACCEPTED'")
+    @Query("SELECT * FROM friends WHERE (requesterUid = :userId OR recipientUid = :userId) AND status = 'ACCEPTED'")
     fun getActiveFriendsForUser(userId: String): Flow<List<FriendEntity>>
 
-    @Query("SELECT * FROM friends WHERE ownerUid = :userId")
+    @Query("SELECT * FROM friends WHERE requesterUid = :userId OR recipientUid = :userId")
     fun getAllFriendships(userId: String): Flow<List<FriendEntity>>
 }

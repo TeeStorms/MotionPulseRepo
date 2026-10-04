@@ -15,7 +15,10 @@ data class UserProfileEntity(
     val currentStreak: Int = 0,
     val language: String = "English",
     val remindersEnabled: Boolean = true,
+    val shareMilestonesWithFriends: Boolean = true,
+    val showHabitNamesInPosts: Boolean = false,
     val fcmToken: String? = null,
+    val friendCode: String = "",
     val recentXp: Map<String, Long> = emptyMap(), // date -> xp gained
     val createdAt: Instant = Instant.now()
 )

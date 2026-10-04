@@ -79,7 +79,7 @@ class HabitReminderReceiver : BroadcastReceiver() {
         val db = Room.databaseBuilder(
             context.applicationContext,
             AppDatabase::class.java, "motion_pulse_db"
-        ).build()
+        ).fallbackToDestructiveMigration().build()
         
         CoroutineScope(Dispatchers.IO).launch {
             val habit = db.habitDao().getHabitById(habitId)
@@ -93,7 +93,7 @@ class HabitReminderReceiver : BroadcastReceiver() {
         val db = Room.databaseBuilder(
             context.applicationContext,
             AppDatabase::class.java, "motion_pulse_db"
-        ).build()
+        ).fallbackToDestructiveMigration().build()
 
         CoroutineScope(Dispatchers.IO).launch {
             val allActiveHabits = db.habitDao().getAllActiveHabits().first()

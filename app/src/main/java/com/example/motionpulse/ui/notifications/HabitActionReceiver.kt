@@ -24,7 +24,7 @@ class HabitActionReceiver : BroadcastReceiver() {
         val db = Room.databaseBuilder(
             context.applicationContext,
             AppDatabase::class.java, "motion_pulse_db"
-        ).build()
+        ).fallbackToDestructiveMigration().build()
 
         val status = when (action) {
             HabitReminderReceiver.ACTION_COMPLETE -> CompletionStatus.COMPLETED

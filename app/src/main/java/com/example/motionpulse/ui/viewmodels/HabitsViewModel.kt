@@ -548,46 +548,64 @@ class HabitsViewModel(
                         alreadyUnlockedBadges = currentBadges
                     )
                     
-                    for (badgeType in newBadges) {
-                        val badgeId = UUID.randomUUID().toString()
-                        db.badgeDao().insertBadge(com.example.motionpulse.data.local.entity.BadgeEntity(
-                            id = badgeId,
-                            userId = userId,
-                            badgeType = badgeType,
-                            unlockedAt = Instant.now(),
-                            triggeredByCompletionId = completionId
-                        ))
-                        _badgeEvent.emit(badgeType)
+                    // Community Milestone
+                    if (profile.shareMilestonesWithFriends) {
+                        for (badgeType in newBadges) {
+                            val badgeId = UUID.randomUUID().toString()
+                            db.badgeDao().insertBadge(com.example.motionpulse.data.local.entity.BadgeEntity(
+                                id = badgeId,
+                                userId = userId,
+                                badgeType = badgeType,
+                                unlockedAt = Instant.now(),
+                                triggeredByCompletionId = completionId
+                            ))
+                            _badgeEvent.emit(badgeType)
+                            
+                            communityRepository.postFeedEntry(com.example.motionpulse.data.local.entity.ActivityFeedEntry(
+                                actorId = userId,
+                                actorName = profile.displayName,
+                                actorAvatarUrl = profile.avatarUrl,
+                                eventType = com.example.motionpulse.data.local.entity.FeedEventType.STREAK_MILESTONE,
+                                habitTitle = if (profile.showHabitNamesInPosts) habit.title else null,
+                                streakCount = newCurrentStreak,
+                                timestamp = System.currentTimeMillis()
+                            ))
+                        }
                         
-                        // Community Milestone
-                        communityRepository.postFeedEntry(com.example.motionpulse.data.local.entity.ActivityFeedEntry(
-                            actorId = userId,
-                            actorName = profile.displayName,
-                            actorAvatarUrl = profile.avatarUrl,
-                            eventType = com.example.motionpulse.data.local.entity.FeedEventType.STREAK_MILESTONE,
-                            streakCount = newCurrentStreak,
-                            timestamp = System.currentTimeMillis()
-                        ))
-                    }
-                    
-                    // Check completion milestone
-                    val todaysCompletions = db.habitCompletionDao().getAllCompletionsFlow().first().filter { it.date == date }
-                    if (todaysCompletions.size == totalHabits) {
-                        communityRepository.postFeedEntry(com.example.motionpulse.data.local.entity.ActivityFeedEntry(
-                            actorId = userId,
-                            actorName = profile.displayName,
-                            actorAvatarUrl = profile.avatarUrl,
-                            eventType = com.example.motionpulse.data.local.entity.FeedEventType.ALL_HABITS_COMPLETED,
-                            timestamp = System.currentTimeMillis()
-                        ))
+                        // Check completion milestone
+                        val todaysCompletions = db.habitCompletionDao().getAllCompletionsFlow().first().filter { it.date == date }
+                        if (todaysCompletions.size == totalHabits) {
+                            communityRepository.postFeedEntry(com.example.motionpulse.data.local.entity.ActivityFeedEntry(
+                                actorId = userId,
+                                actorName = profile.displayName,
+                                actorAvatarUrl = profile.avatarUrl,
+                                eventType = com.example.motionpulse.data.local.entity.FeedEventType.ALL_HABITS_COMPLETED,
+                                habitTitle = if (profile.showHabitNamesInPosts) habit.title else null,
+                                timestamp = System.currentTimeMillis()
+                            ))
+                        }
+                    } else {
+                        for (badgeType in newBadges) {
+                            val badgeId = UUID.randomUUID().toString()
+                            db.badgeDao().insertBadge(com.example.motionpulse.data.local.entity.BadgeEntity(
+                                id = badgeId,
+                                userId = userId,
+                                badgeType = badgeType,
+                                unlockedAt = Instant.now(),
+                                triggeredByCompletionId = completionId
+                            ))
+                            _badgeEvent.emit(badgeType)
+                        }
                     }
                 }
 
                 // Check Duels
-                val activeDuels = communityRepository.getDuels(userId).first()
-                for (duel in activeDuels) {
-                    if (duel.status == "ACTIVE" && duel.habitType == habit.category) {
-                        communityRepository.updateDuelScore(duel.id, userId)
+                val activeDuelsState = communityRepository.getDuels(userId).first()
+                if (activeDuelsState is com.example.motionpulse.domain.models.UiState.Success) {
+                    for (duel in activeDuelsState.data) {
+                        if (duel.status == "ACTIVE" && duel.habitType == habit.category) {
+                            communityRepository.updateDuelScore(duel.id, userId)
+                        }
                     }
                 }
 

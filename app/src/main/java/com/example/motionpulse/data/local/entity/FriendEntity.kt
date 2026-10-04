@@ -5,14 +5,15 @@ import androidx.room.PrimaryKey
 import java.time.Instant
 
 enum class FriendStatus {
-    PENDING, ACCEPTED
+    PENDING, ACCEPTED, DECLINED
 }
 
 @Entity(tableName = "friends")
 data class FriendEntity(
     @PrimaryKey val id: String = "",
-    val ownerUid: String = "",
-    val friendUid: String = "",
+    val requesterUid: String = "",
+    val recipientUid: String = "",
     val status: FriendStatus = FriendStatus.PENDING,
-    val addedAt: Instant = Instant.now()
+    val createdAt: Instant = Instant.now(),
+    val respondedAt: Instant? = null
 )
