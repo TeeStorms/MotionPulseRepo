@@ -73,7 +73,7 @@ class AuthViewModel(
         val isGoogleUser = currentUser.providerData.any { it.providerId == "google.com" }
         if (isGoogleUser || currentUser.isEmailVerified) {
             try {
-                withTimeout(3000L) {
+                withTimeout(10000L) {
                     authRepository.syncUserProfile(currentUser)
                 }
                 _isSyncingFailed.value = false

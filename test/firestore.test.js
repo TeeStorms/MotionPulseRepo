@@ -693,6 +693,41 @@ describe("Motion.Pulse Firestore Security Rules", () => {
     );
   });
 
+  test("profileSync: owner can write their user doc, publicProfile, and friendCode mapping", async () => {
+    const aliceDb = testEnv.authenticatedContext("alice").firestore();
+
+    // Write user profile
+    await assertSucceeds(
+      aliceDb.collection("users").doc("alice").set({
+        uid: "alice",
+        displayName: "Alice",
+        email: "alice@test.com",
+        friendCode: "MP-ALIC-EE01",
+        totalAuraXp: 100,
+        currentLevel: 2
+      })
+    );
+
+    // Write public profile
+    await assertSucceeds(
+      aliceDb.collection("publicProfiles").doc("alice").set({
+        uid: "alice",
+        displayName: "Alice",
+        totalAuraXp: 100,
+        currentLevel: 2,
+        currentStreak: 3,
+        friendCode: "MP-ALIC-EE01"
+      }, { merge: true })
+    );
+
+    // Write friend code mapping
+    await assertSucceeds(
+      aliceDb.collection("friendCodes").doc("MP-ALIC-EE01").set({
+        uid: "alice"
+      })
+    );
+  });
+
   test("duels: resolving duel after endDate with correct winner succeeds, before endDate or wrong winner fails", async () => {
     await testEnv.withSecurityRulesDisabled(async (context) => {
       const adminDb = context.firestore();
