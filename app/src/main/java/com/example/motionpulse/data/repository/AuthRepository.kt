@@ -135,7 +135,9 @@ class AuthRepository(
      */
     suspend fun updateUserSetting(field: String, value: Any) {
         val user = firebaseAuth.currentUser ?: return
-        firestore.collection("users").document(user.uid).update(field, value).await()
+        val updates = mapOf(field to value)
+        firestore.collection("users").document(user.uid).set(updates, SetOptions.merge()).await()
+        firestore.collection("publicProfiles").document(user.uid).set(updates, SetOptions.merge()).await()
     }
 
     /**

@@ -515,6 +515,9 @@ class HabitsViewModel(
 
                 // Update XP
                 val profile = userProfile.value
+                val allActiveHabits = db.habitDao().getAllActiveHabits().first()
+                val maxStreak = allActiveHabits.maxOfOrNull { it.currentStreak } ?: 0
+
                 if (profile != null) {
                     val isNewPb = newCurrentStreak > habit.longestStreak
                     val xpResult = GamificationEngine.calculateXpGain(profile.totalAuraXp, isNewPb)
@@ -526,7 +529,7 @@ class HabitsViewModel(
                     val updatedProfile = profile.copy(
                         totalAuraXp = xpResult.newTotalXp,
                         currentLevel = xpResult.newLevel,
-                        currentStreak = newCurrentStreak, // Track latest streak for leaderboard
+                        currentStreak = maxStreak, // Synchronized aggregate max habit streak
                         recentXp = newRecentXp
                     )
                     db.userProfileDao().updateProfile(updatedProfile)
@@ -537,7 +540,7 @@ class HabitsViewModel(
 
                     // Badge Check
                     val currentBadges = db.badgeDao().getBadgesForUser(userId).first().map { it.badgeType }.toSet()
-                    val totalHabits = db.habitDao().getAllActiveHabits().first().size
+                    val totalHabits = allActiveHabits.size
                     
                     val newBadges = GamificationEngine.checkBadgeUnlocks(
                         userId = userId,
@@ -599,13 +602,13 @@ class HabitsViewModel(
                     }
                 }
 
-                // Check Duels
-                val activeDuelsState = communityRepository.getDuels(userId).first()
-                if (activeDuelsState is com.example.motionpulse.domain.models.UiState.Success) {
-                    for (duel in activeDuelsState.data) {
-                        if (duel.status == "ACTIVE" && duel.habitType == habit.category) {
-                            communityRepository.updateDuelScore(duel.id, userId)
-                        }
+                // Check Duels (Using one-shot getActiveDuelsOnce to avoid callbackFlow UiState.Loading emission issue)
+                val activeDuels = communityRepository.getActiveDuelsOnce(userId)
+                for (duel in activeDuels) {
+                    val normalizedDuelType = duel.habitType.lowercase().replace("&", "and").replace(Regex("\\s+"), " ").trim()
+                    val normalizedHabitCat = habit.category.lowercase().replace("&", "and").replace(Regex("\\s+"), " ").trim()
+                    if (normalizedDuelType == "general" || normalizedDuelType == normalizedHabitCat) {
+                        communityRepository.updateDuelScore(duel.id, userId)
                     }
                 }
 
@@ -658,14 +661,32 @@ class HabitsViewModel(
                     
                     // Revert XP
                     val profile = userProfile.value
+                    val allActiveHabits = db.habitDao().getAllActiveHabits().first()
+                    val maxStreak = allActiveHabits.maxOfOrNull { it.currentStreak } ?: 0
+
                     if (profile != null) {
                         val isWasPb = streakBefore > habit.longestStreak
                         val xpToDeduct = GamificationEngine.BASE_COMPLETION_XP + if (isWasPb) GamificationEngine.NEW_PERSONAL_BEST_BONUS else 0L
                         val newTotalXp = maxOf(0, profile.totalAuraXp - xpToDeduct)
-                        db.userProfileDao().updateProfile(profile.copy(
+                        val updatedProfile = profile.copy(
                             totalAuraXp = newTotalXp,
-                            currentLevel = (newTotalXp / 500L).toInt() + 1
-                        ))
+                            currentLevel = (newTotalXp / 500L).toInt() + 1,
+                            currentStreak = maxStreak
+                        )
+                        db.userProfileDao().updateProfile(updatedProfile)
+                        authRepository.updateUserSetting("totalAuraXp", updatedProfile.totalAuraXp)
+                        authRepository.updateUserSetting("currentLevel", updatedProfile.currentLevel)
+                        authRepository.updateUserSetting("currentStreak", updatedProfile.currentStreak)
+                    }
+
+                    // Check Duels (decrement score on un-completion)
+                    val activeDuels = communityRepository.getActiveDuelsOnce(userId)
+                    for (duel in activeDuels) {
+                        val normalizedDuelType = duel.habitType.lowercase().replace("&", "and").replace(Regex("\\s+"), " ").trim()
+                        val normalizedHabitCat = habit.category.lowercase().replace("&", "and").replace(Regex("\\s+"), " ").trim()
+                        if (normalizedDuelType == "general" || normalizedDuelType == normalizedHabitCat) {
+                            communityRepository.decrementDuelScore(duel.id, userId)
+                        }
                     }
                 }
             } catch (e: Exception) {

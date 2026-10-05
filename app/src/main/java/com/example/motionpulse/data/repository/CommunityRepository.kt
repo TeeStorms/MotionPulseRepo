@@ -381,6 +381,20 @@ class CommunityRepository(
             .update("scores.$userId", FieldValue.increment(1)).await()
     }
 
+    suspend fun decrementDuelScore(duelId: String, userId: String) {
+        firestore.collection("duels").document(duelId)
+            .update("scores.$userId", FieldValue.increment(-1)).await()
+    }
+
+    suspend fun getActiveDuelsOnce(userId: String): List<Duel> {
+        val snapshot = firestore.collection("duels")
+            .whereArrayContains("participants", userId)
+            .whereEqualTo("status", "ACTIVE")
+            .get()
+            .await()
+        return snapshot.documents.mapNotNull { it.toObject(Duel::class.java)?.copy(id = it.id) }
+    }
+
     suspend fun findUserByFriendCode(rawCode: String): UserProfileEntity? {
         val clean = rawCode.uppercase().trim().replace(" ", "").replace("-", "")
         val body = if (clean.startsWith("MP")) clean.removePrefix("MP") else clean

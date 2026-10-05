@@ -39,6 +39,10 @@ class CommunityViewModel(
     private val _userProfile = MutableStateFlow<UserProfileEntity?>(null)
     val userProfile: StateFlow<UserProfileEntity?> = _userProfile.asStateFlow()
 
+    val userHabits: StateFlow<List<com.example.motionpulse.data.local.entity.HabitEntity>> = db.habitDao()
+        .getHabitsForUser(userId)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     private val retryTrigger = MutableStateFlow(0)
 
     fun retry() {
@@ -146,10 +150,16 @@ class CommunityViewModel(
     private val _leaderboardMetric = MutableStateFlow(LeaderboardMetric.WEEKLY_XP)
     val leaderboardMetric: StateFlow<LeaderboardMetric> = _leaderboardMetric.asStateFlow()
 
-    val leaderboardState: StateFlow<UiState<List<UserProfileEntity>>> = combine(friendsState, _leaderboardMetric) { state, metric ->
+    val leaderboardState: StateFlow<UiState<List<UserProfileEntity>>> = combine(
+        friendsState,
+        _leaderboardMetric,
+        db.habitDao().getHabitsForUser(userId)
+    ) { state, metric, habits ->
+        val maxStreak = habits.maxOfOrNull { it.currentStreak } ?: 0
+        val correctedSelf = _userProfile.value?.copy(currentStreak = maxStreak)
         when (state) {
             is UiState.Success -> {
-                val all = state.data + listOfNotNull(_userProfile.value)
+                val all = state.data + listOfNotNull(correctedSelf)
                 val sorted = when (metric) {
                     LeaderboardMetric.WEEKLY_XP -> all.sortedByDescending { computeWeeklyXp(it) }
                     LeaderboardMetric.STREAK -> all.sortedByDescending { it.currentStreak }
@@ -158,7 +168,7 @@ class CommunityViewModel(
                 UiState.Success(sorted)
             }
             is UiState.Empty -> {
-                val selfOnly = listOfNotNull(_userProfile.value)
+                val selfOnly = listOfNotNull(correctedSelf)
                 if (selfOnly.isEmpty()) UiState.Empty else UiState.Success(selfOnly)
             }
             is UiState.Loading -> UiState.Loading
@@ -195,8 +205,7 @@ class CommunityViewModel(
                 _userProfile.value?.let {
                     communityRepository.sendDuelInvite(friendId, userId, it.displayName, habitType, duelId)
                 }
-                val name = friendName ?: "friend"
-                _nudgeFeedback.value = "Duel sent to $name!"
+                _nudgeFeedback.value = "Duel started! Complete your $habitType habits to score."
             } catch (e: Exception) {
                 _nudgeFeedback.value = "Couldn't send challenge — please try again"
             }

@@ -64,6 +64,7 @@ fun CommunityScreen(
     val leaderboardState by viewModel.leaderboardState.collectAsState()
     val challengesState by viewModel.challengesState.collectAsState()
     val duelsState by viewModel.duelsState.collectAsState()
+    val userHabits by viewModel.userHabits.collectAsState()
     val notificationsState by viewModel.notificationsState.collectAsState()
     val userProfile by viewModel.userProfile.collectAsState()
     val selectedMetric by viewModel.leaderboardMetric.collectAsState()
@@ -279,6 +280,7 @@ fun CommunityScreen(
                     initialFriend = targetFriendForChallenge,
                     friendsState = friendsState,
                     duelsState = duelsState,
+                    userHabits = userHabits,
                     currentUserId = userProfile?.uid ?: "",
                     onDismiss = {
                         showChallengeDialog = false
@@ -646,6 +648,7 @@ fun ChallengeFriendDialog(
     initialFriend: UserProfileEntity?,
     friendsState: UiState<List<UserProfileEntity>>,
     duelsState: UiState<List<com.example.motionpulse.data.local.entity.Duel>>,
+    userHabits: List<com.example.motionpulse.data.local.entity.HabitEntity>,
     currentUserId: String,
     onDismiss: () -> Unit,
     onConfirmChallenge: (friendId: String, friendName: String, category: String) -> Unit,
@@ -655,6 +658,7 @@ fun ChallengeFriendDialog(
     val friends = (friendsState as? UiState.Success)?.data ?: emptyList()
     var selectedFriend by remember { mutableStateOf(initialFriend ?: friends.firstOrNull()) }
     var selectedCategory by remember { mutableStateOf("Mind & Focus") }
+    var dialogStep by remember { mutableIntStateOf(1) }
     var isSending by remember { mutableStateOf(false) }
 
     val categories = listOf("General", "Mind & Focus", "Fitness and Health", "Daily Routine", "Other")
@@ -664,6 +668,15 @@ fun ChallengeFriendDialog(
         duel.participants.contains(currentUserId) &&
         duel.participants.contains(selectedFriend!!.uid) &&
         duel.habitType.equals(selectedCategory, ignoreCase = true)
+    }
+
+    val matchingHabitsCount = remember(userHabits, selectedCategory) {
+        val normCat = selectedCategory.lowercase().replace("&", "and").replace(Regex("\\s+"), " ").trim()
+        if (normCat == "general") {
+            userHabits.count { !it.isArchived }
+        } else {
+            userHabits.count { !it.isArchived && it.category.lowercase().replace("&", "and").replace(Regex("\\s+"), " ").trim() == normCat }
+        }
     }
 
     LaunchedEffect(friends) {
@@ -696,7 +709,7 @@ fun ChallengeFriendDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "⚔️ Challenge a Friend",
+                            text = if (dialogStep == 1) "⚔️ Challenge a Friend" else "⚔️ Confirm Duel",
                             color = TextPrimary,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
@@ -745,8 +758,8 @@ fun ChallengeFriendDialog(
                                 }
                             }
                         }
-                    } else {
-                        // Step 1: Friend Selector
+                    } else if (dialogStep == 1) {
+                        // --- STEP 1: SELECT FRIEND & CATEGORY ---
                         Text(
                             text = "SELECT FRIEND",
                             color = AccentPrimary,
@@ -799,14 +812,20 @@ fun ChallengeFriendDialog(
 
                         Spacer(modifier = Modifier.height(20.dp))
 
-                        // Step 2: Category Selector
                         Text(
                             text = "HABIT CATEGORY",
                             color = AccentPrimary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Black
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Choose a category. Whoever logs the most $selectedCategory habits in 7 days wins.",
+                            color = TextSecondary,
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         @OptIn(ExperimentalLayoutApi::class)
                         FlowRow(
@@ -844,23 +863,116 @@ fun ChallengeFriendDialog(
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        // Action Button
                         Button(
-                            onClick = {
-                                selectedFriend?.let { friend ->
-                                    isSending = true
-                                    onConfirmChallenge(friend.uid, friend.displayName, selectedCategory)
-                                }
-                            },
-                            enabled = selectedFriend != null && !isDuplicateActiveDuel && !isSending,
+                            onClick = { dialogStep = 2 },
+                            enabled = selectedFriend != null && !isDuplicateActiveDuel,
                             modifier = Modifier.fillMaxWidth().height(48.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary),
                             shape = RoundedCornerShape(14.dp)
                         ) {
-                            if (isSending) {
-                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                            } else {
-                                Text("Send Challenge", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            Text("Next: Review Challenge", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        }
+                    } else {
+                        // --- STEP 2: SUMMARY & CONFIRMATION ---
+                        val friend = selectedFriend!!
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
+                            border = BorderStroke(1.dp, CardBorderAlt.copy(alpha = 0.3f)),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(20.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier.size(44.dp).clip(CircleShape).background(HeaderGradient2Stop),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(text = friend.displayName.take(1).uppercase(), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                                    }
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Column {
+                                        Text(text = "Opponent", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        Text(text = friend.displayName, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                                    }
+                                }
+
+                                HorizontalDivider(color = Color.White.copy(alpha = 0.1f), modifier = Modifier.padding(vertical = 16.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column {
+                                        Text(text = "CATEGORY", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        Text(text = selectedCategory, color = AccentPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                    }
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text(text = "TIMEFRAME", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        Text(text = "Starts today, ends in 7 days", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(16.dp))
+
+                                Text(
+                                    text = "Race against ${friend.displayName}! Every completed $selectedCategory habit over the next 7 days adds +1 to your score.",
+                                    color = TextSecondary,
+                                    fontSize = 13.sp,
+                                    lineHeight = 18.sp
+                                )
+                            }
+                        }
+
+                        if (matchingHabitsCount == 0) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFD700).copy(alpha = 0.12f)),
+                                border = BorderStroke(1.dp, Color(0xFFFFD700).copy(alpha = 0.4f)),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text(
+                                    text = "⚠️ You don't have any $selectedCategory habits yet — add one first so you can actually score in this duel!",
+                                    color = Color(0xFFFFD700),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.padding(12.dp),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { dialogStep = 1 },
+                                enabled = !isSending,
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(1.dp, CardBorderAlt)
+                            ) {
+                                Text("Back", color = TextPrimary, fontWeight = FontWeight.Bold)
+                            }
+
+                            Button(
+                                onClick = {
+                                    isSending = true
+                                    onConfirmChallenge(friend.uid, friend.displayName, selectedCategory)
+                                },
+                                enabled = !isSending,
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary),
+                                shape = RoundedCornerShape(14.dp)
+                            ) {
+                                if (isSending) {
+                                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                                } else {
+                                    Text("Start Duel", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                }
                             }
                         }
                     }
