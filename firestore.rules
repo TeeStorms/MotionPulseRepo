@@ -47,8 +47,8 @@ service cloud.firestore {
 
         // CREATE: Owner OR cross-user notification write with relationship, block & schema checks
         allow create: if request.auth != null && (
-          // Owner creating for themselves
-          request.auth.uid == userId ||
+          // Owner creating for themselves (except NUDGE)
+          (request.auth.uid == userId && request.resource.data.type != 'NUDGE') ||
           // Cross-user creation
           (
             request.resource.data.senderId == request.auth.uid &&
@@ -64,6 +64,13 @@ service cloud.firestore {
             (
               (request.resource.data.type in ['NUDGE', 'DUEL_INVITE', 'DUEL_RESULT', 'FRIEND_ACCEPTED'] && isAcceptedFriend(request.auth.uid, userId)) ||
               (request.resource.data.type == 'FRIEND_REQUEST' && isPendingFriendRequest(request.auth.uid, userId))
+            ) &&
+            (
+              request.resource.data.type != 'NUDGE' ||
+              (
+                request.resource.data.senderId != userId &&
+                notificationId.matches('^nudge_' + request.auth.uid + '_' + userId + '_.*')
+              )
             )
           )
         );
@@ -151,14 +158,18 @@ service cloud.firestore {
                     && (request.auth.uid in resource.data.participants)
                     && request.resource.data.participants == resource.data.participants
                     && (
-                      // 1) Score increment while ACTIVE and before endDate, +1 by caller
+                      // 1) Score increment or decrement while ACTIVE and before endDate, +/-1 by caller
                       (
                         resource.data.status == 'ACTIVE' &&
                         request.resource.data.status == 'ACTIVE' &&
                         request.time < timestamp.date(int(resource.data.endDate.split('-')[0]), int(resource.data.endDate.split('-')[1]), int(resource.data.endDate.split('-')[2])) &&
                         request.resource.data.winnerId == resource.data.winnerId &&
                         request.resource.data.scores.diff(resource.data.scores).affectedKeys().hasOnly([request.auth.uid]) &&
-                        request.resource.data.scores[request.auth.uid] == resource.data.scores[request.auth.uid] + 1
+                        (
+                          request.resource.data.scores[request.auth.uid] == resource.data.scores[request.auth.uid] + 1 ||
+                          request.resource.data.scores[request.auth.uid] == resource.data.scores[request.auth.uid] - 1
+                        ) &&
+                        request.resource.data.scores[request.auth.uid] >= 0
                       ) ||
                       // 2) Transition ACTIVE to COMPLETED after endDate with correct winnerId matching scores or DRAW
                       (

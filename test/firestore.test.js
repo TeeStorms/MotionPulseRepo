@@ -212,6 +212,23 @@ describe("Motion.Pulse Firestore Security Rules", () => {
     );
   });
 
+  test("notifications: user cannot nudge themselves", async () => {
+    const aliceDb = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(
+      aliceDb.collection("users").doc("alice").collection("notifications").doc("nudge_alice_bob_2026-09-28").set({
+        id: "nudge_alice_bob_2026-09-28",
+        senderId: "alice",
+        senderName: "Alice",
+        type: "NUDGE",
+        timestamp: Date.now(),
+        isRead: false,
+        habitType: null,
+        duelId: null,
+        message: null
+      })
+    );
+  });
+
   test("notifications: friend can create a nudge notification for another user", async () => {
     await testEnv.withSecurityRulesDisabled(async (context) => {
       const adminDb = context.firestore();
@@ -226,8 +243,8 @@ describe("Motion.Pulse Firestore Security Rules", () => {
 
     const aliceDb = testEnv.authenticatedContext("alice").firestore();
     await assertSucceeds(
-      aliceDb.collection("users").doc("bob").collection("notifications").doc("nudge_alice_2026-09-28").set({
-        id: "nudge_alice_2026-09-28",
+      aliceDb.collection("users").doc("bob").collection("notifications").doc("nudge_alice_bob_2026-09-28").set({
+        id: "nudge_alice_bob_2026-09-28",
         senderId: "alice",
         senderName: "Alice",
         type: "NUDGE",
@@ -249,8 +266,8 @@ describe("Motion.Pulse Firestore Security Rules", () => {
         participants: ["alice", "bob"],
         status: "ACCEPTED"
       });
-      await adminDb.collection("users").doc("bob").collection("notifications").doc("nudge_alice_2026-09-28").set({
-        id: "nudge_alice_2026-09-28",
+      await adminDb.collection("users").doc("bob").collection("notifications").doc("nudge_alice_bob_2026-09-28").set({
+        id: "nudge_alice_bob_2026-09-28",
         senderId: "alice",
         senderName: "Alice",
         type: "NUDGE",
@@ -265,8 +282,8 @@ describe("Motion.Pulse Firestore Security Rules", () => {
 
     const aliceDb = testEnv.authenticatedContext("alice").firestore();
     await assertFails(
-      aliceDb.collection("users").doc("bob").collection("notifications").doc("nudge_alice_2026-09-28").set({
-        id: "nudge_alice_2026-09-28",
+      aliceDb.collection("users").doc("bob").collection("notifications").doc("nudge_alice_bob_2026-09-28").set({
+        id: "nudge_alice_bob_2026-09-28",
         senderId: "alice",
         senderName: "Alice",
         type: "NUDGE",
@@ -288,8 +305,8 @@ describe("Motion.Pulse Firestore Security Rules", () => {
         participants: ["alice", "bob"],
         status: "ACCEPTED"
       });
-      await adminDb.collection("users").doc("bob").collection("notifications").doc("nudge_alice_2026-09-28").set({
-        id: "nudge_alice_2026-09-28",
+      await adminDb.collection("users").doc("bob").collection("notifications").doc("nudge_alice_bob_2026-09-28").set({
+        id: "nudge_alice_bob_2026-09-28",
         senderId: "alice",
         senderName: "Alice",
         type: "NUDGE",
@@ -304,8 +321,8 @@ describe("Motion.Pulse Firestore Security Rules", () => {
 
     const aliceDb = testEnv.authenticatedContext("alice").firestore();
     await assertSucceeds(
-      aliceDb.collection("users").doc("bob").collection("notifications").doc("nudge_alice_2026-09-29").set({
-        id: "nudge_alice_2026-09-29",
+      aliceDb.collection("users").doc("bob").collection("notifications").doc("nudge_alice_bob_2026-09-29").set({
+        id: "nudge_alice_bob_2026-09-29",
         senderId: "alice",
         senderName: "Alice",
         type: "NUDGE",
@@ -725,6 +742,62 @@ describe("Motion.Pulse Firestore Security Rules", () => {
       aliceDb.collection("friendCodes").doc("MP-ALIC-EE01").set({
         uid: "alice"
       })
+    );
+  });
+
+  test("duels: participant can increment/decrement score by 1, cannot do invalid deltas or tamper with opponent, and full cycle test passes", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const adminDb = context.firestore();
+      await adminDb.collection("duels").doc("duel_cycle").set({
+        habitType: "Fitness",
+        startDate: "2026-10-01",
+        durationDays: 7,
+        endDate: "2026-10-15",
+        participants: ["alice", "bob"],
+        scores: { alice: 0, bob: 0 },
+        winnerId: null,
+        status: "ACTIVE"
+      });
+      await adminDb.terminate();
+    });
+
+    const aliceDb = testEnv.authenticatedContext("alice").firestore();
+    const duelRef = aliceDb.collection("duels").doc("duel_cycle");
+
+    // 1. Complete matching habit -> score goes from 0 to 1 (increment by 1)
+    await assertSucceeds(
+      duelRef.update({ scores: { alice: 1, bob: 0 } })
+    );
+    let doc = await duelRef.get();
+    expect(doc.data().scores.alice).toBe(1);
+
+    // 2. Remove completion -> score goes back from 1 to 0 (decrement by 1)
+    await assertSucceeds(
+      duelRef.update({ scores: { alice: 0, bob: 0 } })
+    );
+    doc = await duelRef.get();
+    expect(doc.data().scores.alice).toBe(0);
+
+    // 3. Complete again -> score goes to 1, NOT 2 (increment by 1)
+    await assertSucceeds(
+      duelRef.update({ scores: { alice: 1, bob: 0 } })
+    );
+    doc = await duelRef.get();
+    expect(doc.data().scores.alice).toBe(1);
+
+    // Invalid delta (+2) fails
+    await assertFails(
+      duelRef.update({ scores: { alice: 3, bob: 0 } })
+    );
+
+    // Invalid delta (-1 from 1 to -1) fails (below 0)
+    await assertFails(
+      duelRef.update({ scores: { alice: -1, bob: 0 } })
+    );
+
+    // Tampering with opponent's score (bob) fails
+    await assertFails(
+      duelRef.update({ scores: { alice: 1, bob: 1 } })
     );
   });
 
