@@ -33,15 +33,20 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Inject google-services.json from secret
+      - name: Inject google-services.json from secret (Base64 or Raw)
         env:
+          GOOGLE_SERVICES_JSON_B64: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
-          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+          mkdir -p app
+          if [ -n "$GOOGLE_SERVICES_JSON_B64" ]; then
+            echo "Decoding GOOGLE_SERVICES_JSON_B64..."
+            echo "$GOOGLE_SERVICES_JSON_B64" | base64 -d > app/google-services.json
+          elif [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            echo "Using GOOGLE_SERVICES_JSON..."
             echo "$GOOGLE_SERVICES_JSON" > app/google-services.json
           else
-            echo "Warning: GOOGLE_SERVICES_JSON secret is not set. Creating dummy google-services.json for build."
-            mkdir -p app
+            echo "Warning: No google-services secrets set. Creating dummy google-services.json for build."
             echo '{"project_info": {"project_number": "123456789", "project_id": "pulse-702e8", "storage_bucket": "pulse-702e8.appspot.com"}, "client": [{"client_info": {"mobilesdk_app_id": "1:123456789:android:123456789abcdef"}, "oauth_client": [], "services": {"analytics_service": {"status": "1"}, "app_invite_service": {"status": "1"}, "ads_service": {"status": "1"}}}]} ' > app/google-services.json
           fi
 
