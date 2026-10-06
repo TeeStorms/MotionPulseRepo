@@ -1328,6 +1328,7 @@ fun FeedTab(
 fun FeedItem(entry: ActivityFeedEntry, currentUserId: String, viewModel: CommunityViewModel) {
     val nudgedUsersToday by viewModel.nudgedUsersToday.collectAsState()
     val isNudgedToday = entry.actorId in nudgedUsersToday
+    val isOwnEntry = entry.actorId == currentUserId
 
     Row(modifier = Modifier.fillMaxWidth()) {
         Box(
@@ -1359,10 +1360,12 @@ fun FeedItem(entry: ActivityFeedEntry, currentUserId: String, viewModel: Communi
                     onClick = { viewModel.toggleReaction(entry.id) }
                 )
                 
-                NudgeButton(
-                    isNudgedToday = isNudgedToday,
-                    onClick = { viewModel.sendNudge(entry.actorId) }
-                )
+                if (!isOwnEntry) {
+                    NudgeButton(
+                        isNudgedToday = isNudgedToday,
+                        onClick = { viewModel.sendNudge(entry.actorId) }
+                    )
+                }
             }
         }
     }
@@ -2095,6 +2098,9 @@ fun formatTimeAgo(timestamp: Long): String {
         diff < TimeUnit.MINUTES.toMillis(1) -> "just now"
         diff < TimeUnit.HOURS.toMillis(1) -> "${TimeUnit.MILLISECONDS.toMinutes(diff)} mins ago"
         diff < TimeUnit.DAYS.toMillis(1) -> "${TimeUnit.MILLISECONDS.toHours(diff)} hours ago"
-        else -> "${TimeUnit.MILLISECONDS.toDays(diff)} days ago"
+        else -> {
+            val days = TimeUnit.MILLISECONDS.toDays(diff)
+            if (days == 1L) "1 day ago" else "$days days ago"
+        }
     }
 }

@@ -340,13 +340,26 @@ class CommunityViewModel(
     }
 
     fun sendNudge(targetUserId: String) {
+        if (targetUserId == userId) return
         if (targetUserId in _nudgedUsersToday.value) return
         
         viewModelScope.launch {
-            _userProfile.value?.let {
-                _nudgedUsersToday.value = _nudgedUsersToday.value + targetUserId
-                communityRepository.sendNudge(targetUserId, userId, it.displayName)
-                _nudgeFeedback.value = "Nudge sent! Your friend will see it next time they open Motion.Pulse."
+            val dayBucket = java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString()
+            val alreadyNudged = communityPreferences?.hasNudgedTodayFlow(targetUserId, dayBucket)?.first() ?: false
+            if (alreadyNudged) {
+                _nudgedUsersToday.update { it + targetUserId }
+                return@launch
+            }
+
+            _userProfile.value?.let { profile ->
+                try {
+                    communityRepository.sendNudge(targetUserId, userId, profile.displayName)
+                    _nudgedUsersToday.update { it + targetUserId }
+                    communityPreferences?.setNudgedToday(targetUserId, dayBucket, true)
+                } catch (e: Exception) {
+                    _nudgedUsersToday.update { it + targetUserId }
+                    communityPreferences?.setNudgedToday(targetUserId, dayBucket, true)
+                }
             }
         }
     }

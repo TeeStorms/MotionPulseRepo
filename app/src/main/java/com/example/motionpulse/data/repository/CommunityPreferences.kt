@@ -27,4 +27,18 @@ class CommunityPreferences(private val context: Context) {
             preferences[KEY_HAS_SEEN_TIP] = seen
         }
     }
+
+    fun hasNudgedTodayFlow(recipientUid: String, dayBucket: String): Flow<Boolean> {
+        val key = booleanPreferencesKey("nudge_${recipientUid}_$dayBucket")
+        return context.communityDataStore.data.map { preferences ->
+            preferences[key] ?: false
+        }
+    }
+
+    suspend fun setNudgedToday(recipientUid: String, dayBucket: String, nudged: Boolean = true) {
+        val key = booleanPreferencesKey("nudge_${recipientUid}_$dayBucket")
+        context.communityDataStore.edit { preferences ->
+            preferences[key] = nudged
+        }
+    }
 }

@@ -105,7 +105,7 @@ class CommunityRepository(
 
     suspend fun sendNudge(targetUserId: String, senderId: String, senderName: String) {
         val dayBucket = java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString()
-        val notifId = "nudge_${senderId}_${dayBucket}"
+        val notifId = "nudge_${senderId}_${targetUserId}_${dayBucket}"
         val notification = CommunityNotification(
             id = notifId,
             senderId = senderId,
@@ -113,13 +113,9 @@ class CommunityRepository(
             type = "NUDGE",
             timestamp = System.currentTimeMillis()
         )
-        try {
-            firestore.collection("users").document(targetUserId)
-                .collection("notifications").document(notifId)
-                .set(notification).await()
-        } catch (e: Exception) {
-            Log.i("CommunityRepository", "Nudge skipped/already exists for today: ${e.message}")
-        }
+        firestore.collection("users").document(targetUserId)
+            .collection("notifications").document(notifId)
+            .set(notification).await()
     }
 
     suspend fun blockUser(userId: String, blockedUserId: String) {
@@ -310,7 +306,9 @@ class CommunityRepository(
                     if (java.time.LocalDate.now().isBefore(endDate) || java.time.LocalDate.now().isEqual(endDate)) {
                         return@runTransaction
                     }
-                } catch (e: Exception) {}
+                } catch (e: Exception) {
+                    android.util.Log.e("CommunityRepository", "Error parsing duel endDate: $endDateStr", e)
+                }
             }
 
             val participants = snapshot.get("participants") as? List<*> ?: emptyList<Any>()
@@ -595,7 +593,9 @@ class CommunityRepository(
                 friendship?.let { f ->
                     it.friendDao().deleteFriend(f)
                 }
-            } catch (e: Exception) {}
+            } catch (e: Exception) {
+                android.util.Log.e("CommunityRepository", "Error during atomic unfriend transaction", e)
+            }
         }
     }
 
