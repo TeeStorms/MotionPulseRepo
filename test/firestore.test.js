@@ -129,6 +129,35 @@ describe("Motion.Pulse Firestore Security Rules", () => {
     );
   });
 
+  test("activityFeed: first-time post with deterministic ID succeeds, duplicate create fails", async () => {
+    const aliceDb = testEnv.authenticatedContext("alice").firestore();
+    const entryId = "alice_ALL_HABITS_COMPLETED_2026-10-07";
+
+    // First-time post succeeds
+    await assertSucceeds(
+      aliceDb.collection("activityFeed").doc(entryId).set({
+        id: entryId,
+        actorId: "alice",
+        actorName: "Alice",
+        timestamp: Date.now(),
+        eventType: "ALL_HABITS_COMPLETED",
+        visibleTo: ["alice", "bob"]
+      })
+    );
+
+    // Duplicate create with same ID fails
+    await assertFails(
+      aliceDb.collection("activityFeed").doc(entryId).set({
+        id: entryId,
+        actorId: "alice",
+        actorName: "Alice",
+        timestamp: Date.now(),
+        eventType: "ALL_HABITS_COMPLETED",
+        visibleTo: ["alice", "bob"]
+      })
+    );
+  });
+
   test("activityFeed: actorId cannot be spoofed on creation", async () => {
     const bobDb = testEnv.authenticatedContext("bob").firestore();
     await assertFails(
