@@ -40,21 +40,11 @@ fun MotionPulseHeader(
             verticalArrangement = Arrangement.Center
         ) {
             if (showProfileIcon) {
-                // Profile Icon
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.2f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Profile",
-                        tint = Color.White,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
+                // Profile Initials Avatar
+                com.example.motionpulse.ui.components.UserAvatarInitials(
+                    displayName = title,
+                    size = 56.dp
+                )
                 Spacer(modifier = Modifier.height(12.dp))
             }
             

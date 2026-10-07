@@ -44,43 +44,11 @@ fun ProfileHeader(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             // Avatar with Badge
-            Box {
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.2f))
-                        .border(2.dp, Color.White, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (avatarUrl != null) {
-                        // Renders the user's profile picture if a URL is provided.
-                        Text(text = "Photo", color = Color.White)
-                    } else {
-                        val initials = displayName.split(" ")
-                            .filter { it.isNotEmpty() }
-                            .take(2)
-                            .joinToString("") { it.take(1).uppercase() }
-                        
-                        Text(
-                            text = initials.ifEmpty { "?" },
-                            color = Color.White,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-                
-                // Small Blue Badge
-                Box(
-                    modifier = Modifier
-                        .size(16.dp)
-                        .clip(CircleShape)
-                        .background(ProfileAvatarBadge)
-                        .border(1.dp, Color.White, CircleShape)
-                        .align(Alignment.BottomEnd)
-                )
-            }
+            com.example.motionpulse.ui.components.UserAvatarInitials(
+                displayName = displayName,
+                size = 64.dp,
+                showStatusDot = true
+            )
 
             Spacer(modifier = Modifier.width(20.dp))
 

@@ -43,6 +43,7 @@ import com.example.motionpulse.data.local.entity.ActivityFeedEntry
 import com.example.motionpulse.data.local.entity.CommunityNotification
 import com.example.motionpulse.data.local.entity.FeedEventType
 import com.example.motionpulse.data.local.entity.UserProfileEntity
+import com.example.motionpulse.ui.components.UserAvatarInitials
 import com.example.motionpulse.domain.models.UiState
 import com.example.motionpulse.ui.components.MotionPulseBottomNav
 import com.example.motionpulse.ui.screens.dashboard.components.MotionPulseHeader
@@ -571,12 +572,10 @@ fun FriendsManagementDialog(
                                                 modifier = Modifier.fillMaxWidth()
                                             ) {
                                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                                    Box(
-                                                        modifier = Modifier.size(40.dp).clip(CircleShape).background(HeaderGradient2Stop),
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        Text(text = friend.displayName.take(1).uppercase(), color = Color.White)
-                                                    }
+                                                    UserAvatarInitials(
+                                                        displayName = friend.displayName,
+                                                        size = 40.dp
+                                                    )
                                                     Spacer(modifier = Modifier.width(12.dp))
                                                     Column {
                                                         Text(text = friend.displayName, color = TextPrimary, fontWeight = FontWeight.Bold)
@@ -788,15 +787,10 @@ fun ChallengeFriendDialog(
                                         modifier = Modifier.padding(12.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(36.dp)
-                                                .clip(CircleShape)
-                                                .background(HeaderGradient2Stop),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(text = friend.displayName.take(1).uppercase(), color = Color.White, fontWeight = FontWeight.Bold)
-                                        }
+                                        UserAvatarInitials(
+                                            displayName = friend.displayName,
+                                            size = 36.dp
+                                        )
                                         Spacer(modifier = Modifier.width(12.dp))
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(text = friend.displayName, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -883,12 +877,10 @@ fun ChallengeFriendDialog(
                         ) {
                             Column(modifier = Modifier.padding(20.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier.size(44.dp).clip(CircleShape).background(HeaderGradient2Stop),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(text = friend.displayName.take(1).uppercase(), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                                    }
+                                    UserAvatarInitials(
+                                        displayName = friend.displayName,
+                                        size = 44.dp
+                                    )
                                     Spacer(modifier = Modifier.width(16.dp))
                                     Column {
                                         Text(text = "Opponent", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -1331,12 +1323,10 @@ fun FeedItem(entry: ActivityFeedEntry, currentUserId: String, viewModel: Communi
     val isOwnEntry = entry.actorId == currentUserId
 
     Row(modifier = Modifier.fillMaxWidth()) {
-        Box(
-            modifier = Modifier.size(48.dp).clip(CircleShape).background(HeaderGradient2Stop),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = entry.actorName.take(2).uppercase(), color = Color.White, fontWeight = FontWeight.Bold)
-        }
+        UserAvatarInitials(
+            displayName = entry.actorName,
+            size = 48.dp
+        )
         
         Spacer(modifier = Modifier.width(16.dp))
         
@@ -1527,12 +1517,10 @@ fun LeaderboardItem(
         shape = RoundedCornerShape(16.dp)
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier.size(40.dp).clip(CircleShape).background(HeaderGradient2Stop),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = profile.displayName.take(1).uppercase(), color = Color.White)
-            }
+            UserAvatarInitials(
+                displayName = profile.displayName,
+                size = 40.dp
+            )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = profile.displayName, color = TextPrimary, fontWeight = FontWeight.Bold)
@@ -1861,12 +1849,10 @@ fun DuelCard(
             ) {
                 // User Side
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier.size(32.dp).clip(CircleShape).background(HeaderGradient2Stop),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("YOU".take(1), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
+                    UserAvatarInitials(
+                        displayName = "You",
+                        size = 32.dp
+                    )
                     Spacer(modifier = Modifier.width(8.dp))
                     Column(horizontalAlignment = Alignment.Start) {
                         Text(text = "YOU", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
@@ -1883,12 +1869,10 @@ fun DuelCard(
                         Text(text = "$oppScore", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Black)
                     }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Box(
-                        modifier = Modifier.size(32.dp).clip(CircleShape).background(HeaderGradient2Stop),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(text = opponentName.take(1).uppercase(), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
+                    UserAvatarInitials(
+                        displayName = opponentName,
+                        size = 32.dp
+                    )
                 }
             }
 
@@ -1995,12 +1979,10 @@ fun DuelDetailDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier.size(36.dp).clip(CircleShape).background(HeaderGradient2Stop),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text("YOU".take(1), color = Color.White, fontWeight = FontWeight.Bold)
-                                    }
+                                    UserAvatarInitials(
+                                        displayName = "You",
+                                        size = 36.dp
+                                    )
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Text("You", color = TextPrimary, fontWeight = FontWeight.Bold)
                                 }
@@ -2015,12 +1997,10 @@ fun DuelDetailDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier.size(36.dp).clip(CircleShape).background(HeaderGradient2Stop),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(opponentName.take(1).uppercase(), color = Color.White, fontWeight = FontWeight.Bold)
-                                    }
+                                    UserAvatarInitials(
+                                        displayName = opponentName,
+                                        size = 36.dp
+                                    )
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Text(opponentName, color = TextPrimary, fontWeight = FontWeight.Bold)
                                 }
