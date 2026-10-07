@@ -66,6 +66,7 @@ fun DashboardScreen(
                 MotionPulseHeader(
                     title = "Welcome back,\n${userProfile?.displayName ?: "User"}",
                     showProfileIcon = true,
+                    userName = userProfile?.displayName,
                     todayMood = todayMood
                 )
 

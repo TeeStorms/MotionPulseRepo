@@ -24,6 +24,7 @@ fun MotionPulseHeader(
     title: String,
     subtitle: String? = null,
     showProfileIcon: Boolean = false,
+    userName: String? = null,
     todayMood: MoodEntity? = null,
     gradient: Brush = HeaderGradient3Stop
 ) {
@@ -42,7 +43,7 @@ fun MotionPulseHeader(
             if (showProfileIcon) {
                 // Profile Initials Avatar
                 com.example.motionpulse.ui.components.UserAvatarInitials(
-                    displayName = title,
+                    displayName = userName ?: title,
                     size = 56.dp
                 )
                 Spacer(modifier = Modifier.height(12.dp))
