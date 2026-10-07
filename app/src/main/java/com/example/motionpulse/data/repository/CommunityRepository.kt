@@ -69,6 +69,13 @@ class CommunityRepository(
     }
 
     suspend fun postFeedEntry(entry: ActivityFeedEntry) {
+        val dayBucket = java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString()
+        val entryId = when (entry.eventType) {
+            FeedEventType.ALL_HABITS_COMPLETED -> "${entry.actorId}_ALL_HABITS_COMPLETED_$dayBucket"
+            FeedEventType.STREAK_MILESTONE -> "${entry.actorId}_STREAK_${entry.streakCount ?: 0}"
+            FeedEventType.STREAK_AT_RISK -> "${entry.actorId}_STREAK_AT_RISK_$dayBucket"
+        }
+
         val friendUids = try {
             val friendsSnapshot = firestore.collection("friendRequests")
                 .whereArrayContains("participants", entry.actorId)
@@ -85,8 +92,42 @@ class CommunityRepository(
         }
 
         val audience = (listOf(entry.actorId) + friendUids).distinct()
-        val entryWithAudience = entry.copy(visibleTo = audience)
-        firestore.collection("activityFeed").add(entryWithAudience).await()
+        val entryWithAudience = entry.copy(id = entryId, visibleTo = audience)
+        try {
+            firestore.collection("activityFeed").document(entryId).set(entryWithAudience).await()
+        } catch (e: Exception) {
+            android.util.Log.i("CommunityRepository", "Feed entry already exists or denied: ${e.message}")
+        }
+    }
+
+    suspend fun cleanupDuplicateFeedEntries(userId: String) {
+        try {
+            val snapshot = firestore.collection("activityFeed")
+                .whereArrayContains("visibleTo", userId)
+                .get()
+                .await()
+
+            val docsByEventAndDate = mutableMapOf<String, MutableList<com.google.firebase.firestore.DocumentSnapshot>>()
+            for (doc in snapshot.documents) {
+                if (doc.getString("actorId") != userId) continue
+                val eventType = doc.getString("eventType") ?: continue
+                val timestamp = doc.getLong("timestamp") ?: 0L
+                val date = java.time.Instant.ofEpochMilli(timestamp).atZone(java.time.ZoneOffset.UTC).toLocalDate().toString()
+                val key = "${eventType}_$date"
+                docsByEventAndDate.getOrPut(key) { mutableListOf() }.add(doc)
+            }
+
+            for ((_, docs) in docsByEventAndDate) {
+                if (docs.size > 1) {
+                    docs.sortByDescending { it.getLong("timestamp") ?: 0L }
+                    for (i in 1 until docs.size) {
+                        docs[i].reference.delete().await()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("CommunityRepository", "Error cleaning up duplicate feed entries", e)
+        }
     }
 
     suspend fun toggleReaction(entryId: String, userId: String) {
