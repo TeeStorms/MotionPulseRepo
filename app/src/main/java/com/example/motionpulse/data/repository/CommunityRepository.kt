@@ -416,13 +416,25 @@ class CommunityRepository(
     }
 
     suspend fun updateDuelScore(duelId: String, userId: String) {
-        firestore.collection("duels").document(duelId)
-            .update("scores.$userId", FieldValue.increment(1)).await()
+        val docRef = firestore.collection("duels").document(duelId)
+        firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(docRef)
+            val scores = snapshot.get("scores") as? MutableMap<String, Any> ?: mutableMapOf()
+            val current = (scores[userId] as? Number)?.toLong() ?: 0L
+            scores[userId] = current + 1L
+            transaction.update(docRef, "scores", scores)
+        }.await()
     }
 
     suspend fun decrementDuelScore(duelId: String, userId: String) {
-        firestore.collection("duels").document(duelId)
-            .update("scores.$userId", FieldValue.increment(-1)).await()
+        val docRef = firestore.collection("duels").document(duelId)
+        firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(docRef)
+            val scores = snapshot.get("scores") as? MutableMap<String, Any> ?: mutableMapOf()
+            val current = (scores[userId] as? Number)?.toLong() ?: 0L
+            scores[userId] = maxOf(0L, current - 1L)
+            transaction.update(docRef, "scores", scores)
+        }.await()
     }
 
     suspend fun getActiveDuelsOnce(userId: String): List<Duel> {

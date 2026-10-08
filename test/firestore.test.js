@@ -845,9 +845,9 @@ describe("Motion.Pulse Firestore Security Rules", () => {
       });
       await adminDb.collection("duels").doc("duel_future").set({
         habitType: "Running",
-        startDate: "2026-10-01",
+        startDate: "2030-01-01",
         durationDays: 7,
-        endDate: "2026-10-08",
+        endDate: "2035-01-01",
         participants: ["alice", "bob"],
         scores: { alice: 5, bob: 3 },
         winnerId: null,
@@ -939,21 +939,21 @@ describe("Motion.Pulse Firestore Security Rules", () => {
     // Incrementing by +1 before endDate succeeds
     await assertSucceeds(
       aliceDb.collection("duels").doc("duel_future").update({
-        "scores.alice": 1
+        scores: { alice: 1, bob: 0 }
       })
     );
 
-    // Incrementing by +2 fails
+    // Incrementing by +3 fails
     await assertFails(
       aliceDb.collection("duels").doc("duel_future").update({
-        "scores.alice": 3
+        scores: { alice: 3, bob: 0 }
       })
     );
 
     // Incrementing after endDate fails
     await assertFails(
       aliceDb.collection("duels").doc("duel_past").update({
-        "scores.alice": 1
+        scores: { alice: 1, bob: 0 }
       })
     );
   });
