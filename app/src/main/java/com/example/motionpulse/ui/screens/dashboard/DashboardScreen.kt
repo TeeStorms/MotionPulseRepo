@@ -51,9 +51,23 @@ fun DashboardScreen(
     val prefRepo = remember { com.example.motionpulse.data.repository.PreferenceRepository(context) }
     val isFirstLaunch = remember { prefRepo.isFirstLaunch() }
 
+    val notifPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+        onResult = { _ -> }
+    )
+
     LaunchedEffect(Unit) {
         if (isFirstLaunch) {
             prefRepo.setFirstLaunchCompleted()
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            val hasPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.POST_NOTIFICATIONS
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            if (!hasPermission) {
+                notifPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
         }
     }
 

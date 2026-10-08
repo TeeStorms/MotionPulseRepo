@@ -45,12 +45,24 @@ data class FrequencyConfig(
         return try {
             when (type) {
                 FrequencyType.EVERY_DAY -> true
-                FrequencyType.X_TIMES_PER_WEEK -> true // Scoring handles the count per week
+                FrequencyType.X_TIMES_PER_WEEK -> {
+                    val count = (timesPerWeek ?: 3).coerceIn(1, 7)
+                    val scheduledDays = when (count) {
+                        1 -> setOf(DayOfWeek.MONDAY)
+                        2 -> setOf(DayOfWeek.MONDAY, DayOfWeek.THURSDAY)
+                        3 -> setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY)
+                        4 -> setOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY, DayOfWeek.SUNDAY)
+                        5 -> setOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY)
+                        6 -> setOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY)
+                        else -> setOf(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
+                    }
+                    scheduledDays.contains(date.dayOfWeek)
+                }
                 FrequencyType.SPECIFIC_DAYS -> specificDays?.contains(date.dayOfWeek) ?: true
                 FrequencyType.EVERY_OTHER_DAY -> {
                     val start = startDate?.let { LocalDate.parse(it) } ?: return true
                     val daysBetween = java.time.temporal.ChronoUnit.DAYS.between(start, date)
-                    daysBetween % 2 == 0L
+                    daysBetween >= 0 && daysBetween % 2 == 0L
                 }
             }
         } catch (e: Exception) {
