@@ -47,6 +47,18 @@ fun DashboardScreen(
         }
     }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefRepo = remember { com.example.motionpulse.data.repository.PreferenceRepository(context) }
+    val isFirstLaunch = remember { prefRepo.isFirstLaunch() }
+
+    LaunchedEffect(Unit) {
+        if (isFirstLaunch) {
+            prefRepo.setFirstLaunchCompleted()
+        }
+    }
+
+    val greeting = if (isFirstLaunch) "Welcome" else "Welcome back"
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
@@ -64,7 +76,7 @@ fun DashboardScreen(
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 MotionPulseHeader(
-                    title = "Welcome back,\n${userProfile?.displayName ?: "User"}",
+                    title = "$greeting,\n${userProfile?.displayName ?: "User"}",
                     showProfileIcon = true,
                     userName = userProfile?.displayName,
                     todayMood = todayMood
