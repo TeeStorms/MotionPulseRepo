@@ -19,10 +19,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.motionpulse.R
 import com.example.motionpulse.data.export.CsvExportManager
 import com.example.motionpulse.ui.components.MotionPulseBottomNav
 import com.example.motionpulse.ui.screens.profile.components.*
@@ -201,6 +205,9 @@ fun ProfileScreen(
                 SettingItem(label = "Change Profile", onClick = { showEditProfileDialog = true })
                 SettingItem(label = "Change Password", onClick = { showChangePasswordDialog = true })
                 SettingItem(label = "Language: ${profile?.language ?: "English"}", onClick = { showLanguageDialog = true })
+
+                SettingsSectionHeader(title = stringResource(R.string.settings_section_preferences))
+
                 SettingItem(
                     label = "Reminder: ${if (profile?.remindersEnabled == true) "On" else "Off"}",
                     onClick = { viewModel.toggleReminders(profile?.remindersEnabled != true, context) }
@@ -334,6 +341,21 @@ fun ProfileScreen(
             }
         )
     }
+}
+
+@Composable
+fun SettingsSectionHeader(title: String) {
+    Spacer(modifier = Modifier.height(16.dp))
+    Text(
+        text = title,
+        color = TextSecondary,
+        fontSize = 14.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
+            .semantics { heading() }
+    )
 }
 
 
