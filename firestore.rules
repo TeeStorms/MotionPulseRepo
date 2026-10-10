@@ -152,15 +152,16 @@ service cloud.firestore {
       allow update: if request.auth != null
                     && ('participants' in resource.data)
                     && (request.auth.uid in resource.data.participants)
-                    && request.resource.data.participants == resource.data.participants
+                    && (!('participants' in request.resource.data) || request.resource.data.participants == resource.data.participants)
                     && (
                       // 1) Score increment or decrement while ACTIVE and before endDate, +/-1 by caller
                       (
                         resource.data.status == 'ACTIVE' &&
-                        request.resource.data.status == 'ACTIVE' &&
+                        (!('status' in request.resource.data) || request.resource.data.status == 'ACTIVE') &&
                         request.time < timestamp.date(int(resource.data.endDate.split('-')[0]), int(resource.data.endDate.split('-')[1]), int(resource.data.endDate.split('-')[2])) + duration.value(1, 'd') &&
-                        request.resource.data.winnerId == resource.data.winnerId &&
+                        (!('winnerId' in request.resource.data) || request.resource.data.winnerId == resource.data.winnerId) &&
                         request.auth.uid in resource.data.scores &&
+                        ('scores' in request.resource.data) &&
                         request.auth.uid in request.resource.data.scores &&
                         request.resource.data.scores.diff(resource.data.scores).affectedKeys().hasOnly([request.auth.uid]) &&
                         (
@@ -172,12 +173,13 @@ service cloud.firestore {
                       // 2) Transition ACTIVE to COMPLETED after endDate with correct winnerId matching scores or DRAW
                       (
                         resource.data.status == 'ACTIVE' &&
-                        request.resource.data.status == 'COMPLETED' &&
+                        ('status' in request.resource.data && request.resource.data.status == 'COMPLETED') &&
                         request.time >= timestamp.date(int(resource.data.endDate.split('-')[0]), int(resource.data.endDate.split('-')[1]), int(resource.data.endDate.split('-')[2])) + duration.value(1, 'd') &&
                         (!('scores' in request.resource.data) || request.resource.data.scores == resource.data.scores) &&
                         resource.data.participants.size() == 2 &&
                         resource.data.participants[0] in resource.data.scores &&
                         resource.data.participants[1] in resource.data.scores &&
+                        ('winnerId' in request.resource.data) &&
                         (
                           (resource.data.scores[resource.data.participants[0]] > resource.data.scores[resource.data.participants[1]] && request.resource.data.winnerId == resource.data.participants[0]) ||
                           (resource.data.scores[resource.data.participants[1]] > resource.data.scores[resource.data.participants[0]] && request.resource.data.winnerId == resource.data.participants[1]) ||
@@ -187,7 +189,7 @@ service cloud.firestore {
                       // 3) Transition ACTIVE to CANCELLED (e.g. unfriend)
                       (
                         resource.data.status == 'ACTIVE' &&
-                        request.resource.data.status == 'CANCELLED'
+                        ('status' in request.resource.data && request.resource.data.status == 'CANCELLED')
                       )
                     );
 

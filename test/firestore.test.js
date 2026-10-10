@@ -8,6 +8,12 @@ const path = require("path");
 
 jest.setTimeout(20000);
 
+function getUtcDateString(offsetDays = 0) {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + offsetDays);
+  return d.toISOString().slice(0, 10);
+}
+
 describe("Motion.Pulse Firestore Security Rules", () => {
   let testEnv;
 
@@ -216,9 +222,9 @@ describe("Motion.Pulse Firestore Security Rules", () => {
       const adminDb = context.firestore();
       await adminDb.collection("duels").doc("d1").set({
         habitType: "Running",
-        startDate: "2026-09-01",
+        startDate: getUtcDateString(-7),
         durationDays: 7,
-        endDate: "2026-10-08",
+        endDate: getUtcDateString(7),
         participants: ["alice", "bob"],
         scores: { alice: 2, bob: 1 },
         winnerId: null,
@@ -698,9 +704,9 @@ describe("Motion.Pulse Firestore Security Rules", () => {
       aliceDb.collection("duels").doc("duel_new_1").set({
         id: "duel_new_1",
         habitType: "Fitness and Health",
-        startDate: "2026-10-04",
+        startDate: getUtcDateString(0),
         durationDays: 7,
-        endDate: "2026-10-11",
+        endDate: getUtcDateString(7),
         participants: ["alice", "bob"],
         scores: { alice: 0, bob: 0 },
         winnerId: null,
@@ -713,9 +719,9 @@ describe("Motion.Pulse Firestore Security Rules", () => {
       aliceDb.collection("duels").doc("duel_new_2").set({
         id: "duel_new_2",
         habitType: "Fitness and Health",
-        startDate: "2026-10-04",
+        startDate: getUtcDateString(0),
         durationDays: 7,
-        endDate: "2026-10-11",
+        endDate: getUtcDateString(7),
         participants: ["alice", "charlie"],
         scores: { alice: 0, charlie: 0 },
         winnerId: null,
@@ -728,9 +734,9 @@ describe("Motion.Pulse Firestore Security Rules", () => {
       aliceDb.collection("duels").doc("duel_new_3").set({
         id: "duel_new_3",
         habitType: "Fitness and Health",
-        startDate: "2026-10-04",
+        startDate: getUtcDateString(0),
         durationDays: 7,
-        endDate: "2026-10-11",
+        endDate: getUtcDateString(7),
         participants: ["bob", "charlie"],
         scores: { bob: 0, charlie: 0 },
         winnerId: null,
@@ -779,9 +785,9 @@ describe("Motion.Pulse Firestore Security Rules", () => {
       const adminDb = context.firestore();
       await adminDb.collection("duels").doc("duel_cycle").set({
         habitType: "Fitness",
-        startDate: "2026-10-01",
+        startDate: getUtcDateString(-3),
         durationDays: 7,
-        endDate: "2026-10-15",
+        endDate: getUtcDateString(7),
         participants: ["alice", "bob"],
         scores: { alice: 0, bob: 0 },
         winnerId: null,
@@ -835,9 +841,9 @@ describe("Motion.Pulse Firestore Security Rules", () => {
       const adminDb = context.firestore();
       await adminDb.collection("duels").doc("duel_past").set({
         habitType: "Running",
-        startDate: "2026-09-01",
+        startDate: getUtcDateString(-14),
         durationDays: 7,
-        endDate: "2026-09-08",
+        endDate: getUtcDateString(-7),
         participants: ["alice", "bob"],
         scores: { alice: 5, bob: 3 },
         winnerId: null,
@@ -845,9 +851,9 @@ describe("Motion.Pulse Firestore Security Rules", () => {
       });
       await adminDb.collection("duels").doc("duel_future").set({
         habitType: "Running",
-        startDate: "2030-01-01",
+        startDate: getUtcDateString(1),
         durationDays: 7,
-        endDate: "2035-01-01",
+        endDate: getUtcDateString(8),
         participants: ["alice", "bob"],
         scores: { alice: 5, bob: 3 },
         winnerId: null,
@@ -888,9 +894,9 @@ describe("Motion.Pulse Firestore Security Rules", () => {
       const adminDb = context.firestore();
       await adminDb.collection("duels").doc("duel_past").set({
         habitType: "Running",
-        startDate: "2026-09-01",
+        startDate: getUtcDateString(-14),
         durationDays: 7,
-        endDate: "2026-09-08",
+        endDate: getUtcDateString(-7),
         participants: ["alice", "bob"],
         scores: { alice: 5, bob: 3 },
         winnerId: null,
@@ -913,9 +919,9 @@ describe("Motion.Pulse Firestore Security Rules", () => {
       const adminDb = context.firestore();
       await adminDb.collection("duels").doc("duel_future").set({
         habitType: "Running",
-        startDate: "2026-10-01",
+        startDate: getUtcDateString(-3),
         durationDays: 7,
-        endDate: "2026-10-08",
+        endDate: getUtcDateString(4),
         participants: ["alice", "bob"],
         scores: { alice: 0, bob: 0 },
         winnerId: null,
@@ -923,9 +929,9 @@ describe("Motion.Pulse Firestore Security Rules", () => {
       });
       await adminDb.collection("duels").doc("duel_past").set({
         habitType: "Running",
-        startDate: "2026-09-01",
+        startDate: getUtcDateString(-14),
         durationDays: 7,
-        endDate: "2026-09-08",
+        endDate: getUtcDateString(-7),
         participants: ["alice", "bob"],
         scores: { alice: 0, bob: 0 },
         winnerId: null,
