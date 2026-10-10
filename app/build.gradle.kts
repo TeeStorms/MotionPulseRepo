@@ -55,6 +55,10 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
 
+    // Media3 ExoPlayer
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.ui)
+
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
 
