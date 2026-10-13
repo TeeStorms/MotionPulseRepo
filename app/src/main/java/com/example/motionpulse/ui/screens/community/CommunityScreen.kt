@@ -18,8 +18,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
@@ -32,7 +34,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import com.example.motionpulse.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -240,7 +244,10 @@ fun CommunityScreen(
                     notificationsState = notificationsState,
                     incomingRequestsState = incomingRequestsState,
                     onDismiss = { showNotificationTray = false },
-                    onMarkRead = { viewModel.markRead(it) },
+                    onMarkAllRead = { viewModel.markAllRead(it) },
+                    onDeleteNotifications = { viewModel.deleteNotifications(it) },
+                    onClearAll = { viewModel.clearAllNotifications(it) },
+                    onCleanupOld = { viewModel.cleanupOldNotifications() },
                     onRespond = { reqId, uid, accept -> viewModel.respondToRequest(reqId, uid, accept) },
                     onBlock = { viewModel.blockUser(it) },
                     onRetry = { viewModel.retry() }
@@ -363,16 +370,81 @@ fun <T> UiStateContainer(
     }
 }
 
+data class GroupedNotification(
+    val key: String,
+    val primaryNotification: CommunityNotification,
+    val allIds: List<String>,
+    val count: Int,
+    val isUnread: Boolean,
+    val latestTimestamp: Long
+)
+
+fun groupNotifications(notes: List<CommunityNotification>): List<GroupedNotification> {
+    val groupedMap = LinkedHashMap<String, MutableList<CommunityNotification>>()
+    for (note in notes) {
+        val groupKey = if (note.type == "NUDGE" && note.senderId.isNotEmpty()) {
+            "NUDGE_${note.senderId}"
+        } else {
+            note.id
+        }
+        groupedMap.getOrPut(groupKey) { mutableListOf() }.add(note)
+    }
+
+    return groupedMap.values.map { list ->
+        val latest = list.maxByOrNull { it.timestamp } ?: list.first()
+        GroupedNotification(
+            key = if (latest.type == "NUDGE" && latest.senderId.isNotEmpty()) "NUDGE_${latest.senderId}" else latest.id,
+            primaryNotification = latest,
+            allIds = list.map { it.id },
+            count = list.size,
+            isUnread = list.any { !it.isRead },
+            latestTimestamp = latest.timestamp
+        )
+    }.sortedByDescending { it.latestTimestamp }
+}
+
+fun formatRelativeTime(timestamp: Long): String {
+    val diff = System.currentTimeMillis() - timestamp
+    if (diff < 60_000L) return "Just now"
+    val minutes = diff / 60_000L
+    if (minutes < 60L) return if (minutes == 1L) "1 min ago" else "$minutes mins ago"
+    val hours = minutes / 60L
+    if (hours < 24L) return if (hours == 1L) "1 hr ago" else "$hours hrs ago"
+    val days = hours / 24L
+    if (days < 30L) return if (days == 1L) "1 day ago" else "$days days ago"
+    val months = days / 30L
+    return if (months == 1L) "1 mo ago" else "$months mos ago"
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationTray(
     notificationsState: UiState<List<CommunityNotification>>,
     incomingRequestsState: UiState<List<com.example.motionpulse.data.local.entity.FriendEntity>>,
     onDismiss: () -> Unit,
-    onMarkRead: (String) -> Unit,
+    onMarkAllRead: (List<String>) -> Unit,
+    onDeleteNotifications: (List<String>) -> Unit,
+    onClearAll: (List<String>) -> Unit,
+    onCleanupOld: () -> Unit,
     onRespond: (String, String, Boolean) -> Unit,
     onBlock: (String) -> Unit,
     onRetry: () -> Unit
 ) {
+    var showClearConfirmDialog by remember { mutableStateOf(false) }
+
+    val requests = (incomingRequestsState as? UiState.Success)?.data ?: emptyList()
+    val notes = (notificationsState as? UiState.Success)?.data ?: emptyList()
+    val groupedNotes = remember(notes) { groupNotifications(notes) }
+    val allNotifIds = remember(notes) { notes.map { it.id } }
+    val unreadIds = remember(notes) { notes.filter { !it.isRead }.map { it.id } }
+
+    LaunchedEffect(Unit) {
+        if (unreadIds.isNotEmpty()) {
+            onMarkAllRead(unreadIds)
+        }
+        onCleanupOld()
+    }
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color.Black.copy(alpha = 0.8f)
@@ -391,19 +463,28 @@ fun NotificationTray(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "Social Hub", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = TextSecondary)
+                    Text(
+                        text = stringResource(id = R.string.notifications_title),
+                        color = TextPrimary,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (notes.isNotEmpty()) {
+                            TextButton(onClick = { showClearConfirmDialog = true }) {
+                                Text("Clear all", color = TextSecondary, fontSize = 13.sp)
+                            }
+                        }
+                        IconButton(onClick = onDismiss) {
+                            Icon(Icons.Default.Close, contentDescription = "Close", tint = TextSecondary)
+                        }
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                val requests = (incomingRequestsState as? UiState.Success)?.data ?: emptyList()
-                val notes = (notificationsState as? UiState.Success)?.data ?: emptyList()
+
+                Spacer(modifier = Modifier.height(16.dp))
 
                 if (notificationsState is UiState.Error || incomingRequestsState is UiState.Error) {
-                    val errorMsg = (notificationsState as? UiState.Error)?.message 
+                    val errorMsg = (notificationsState as? UiState.Error)?.message
                         ?: (incomingRequestsState as? UiState.Error)?.message ?: "Failed to load notifications"
                     Column(
                         modifier = Modifier.fillMaxWidth().weight(1f),
@@ -415,7 +496,7 @@ fun NotificationTray(
                         Text(errorMsg, color = TextPrimary, fontWeight = FontWeight.Bold)
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary)) {
-                            Text("Couldn't load this. Tap to retry")
+                            Text("Tap to retry")
                         }
                     }
                 } else if (notificationsState is UiState.Loading || incomingRequestsState is UiState.Loading) {
@@ -423,13 +504,13 @@ fun NotificationTray(
                         CircularProgressIndicator(color = AccentPrimary)
                     }
                 } else {
-                    LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         if (requests.isNotEmpty()) {
                             item {
                                 Text(text = "FRIEND REQUESTS", color = AccentPrimary, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(8.dp))
                             }
-                            items(requests) { req ->
+                            items(requests, key = { it.id }) { req ->
                                 FriendRequestItem(req, onRespond, onBlock)
                             }
                             item {
@@ -437,25 +518,64 @@ fun NotificationTray(
                             }
                         }
 
-                        if (notes.isEmpty() && requests.isEmpty()) {
+                        if (groupedNotes.isEmpty() && requests.isEmpty()) {
                             item {
-                                Box(modifier = Modifier.fillParentMaxHeight(0.5f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                    Text("No notifications yet", color = TextSecondary)
+                                Column(
+                                    modifier = Modifier.fillParentMaxHeight(0.5f).fillMaxWidth(),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.NotificationsNone,
+                                        contentDescription = null,
+                                        tint = TextSecondary,
+                                        modifier = Modifier.size(48.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text("You're all caught up", color = TextSecondary, fontSize = 15.sp, fontWeight = FontWeight.Medium)
                                 }
                             }
-                        } else {
+                        } else if (groupedNotes.isNotEmpty()) {
                             item {
                                 Text(text = "RECENT ACTIVITY", color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(8.dp))
                             }
-                            items(notes) { note ->
-                                NotificationItem(note, onMarkRead)
+                            items(groupedNotes, key = { it.key }) { group ->
+                                NotificationGroupItem(
+                                    group = group,
+                                    onDismissGroup = { onDeleteNotifications(group.allIds) },
+                                    onRespond = onRespond
+                                )
                             }
                         }
                     }
                 }
             }
         }
+    }
+
+    if (showClearConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearConfirmDialog = false },
+            title = { Text("Clear all notifications?") },
+            text = { Text("This will permanently remove all notifications from your list.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onClearAll(allNotifIds)
+                        showClearConfirmDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                ) {
+                    Text("Clear All")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearConfirmDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -1223,26 +1343,126 @@ fun AddFriendOverlay(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationItem(note: CommunityNotification, onMarkRead: (String) -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable { onMarkRead(note.id) },
-        colors = CardDefaults.cardColors(containerColor = if (note.isRead) Color.Transparent else Color.White.copy(alpha = 0.05f)),
-        border = BorderStroke(1.dp, if (note.isRead) Color.Transparent else CardBorderAlt.copy(alpha = 0.3f))
+fun NotificationGroupItem(
+    group: GroupedNotification,
+    onDismissGroup: () -> Unit,
+    onRespond: (String, String, Boolean) -> Unit
+) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart || value == SwipeToDismissBoxValue.StartToEnd) {
+                onDismissGroup()
+                true
+            } else false
+        }
+    )
+
+    val note = group.primaryNotification
+    val senderName = note.senderName.ifBlank { "Someone" }
+
+    val displayText = when (note.type) {
+        "NUDGE" -> "$senderName nudged you${if (group.count > 1) " x${group.count}" else ""}. Keep your streak going!"
+        "DUEL_INVITE" -> "$senderName challenged you to a duel"
+        "DUEL_RESULT" -> note.message ?: "Your duel with $senderName ended."
+        "FRIEND_REQUEST" -> "$senderName sent you a friend request"
+        "FRIEND_ACCEPTED" -> "$senderName accepted your friend request"
+        else -> note.message ?: "New update from $senderName"
+    }
+
+    SwipeToDismissBox(
+        state = dismissState,
+        backgroundContent = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Red.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                    .padding(horizontal = 20.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Icon(Icons.Default.Delete, contentDescription = "Dismiss", tint = Color.White)
+            }
+        }
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = when(note.type) {
-                    "DUEL_INVITE" -> "⚔️ DUEL CHALLENGE"
-                    "DUEL_RESULT" -> "🏆 DUEL RESULT"
-                    else -> "👋 COMMUNITY NUDGE"
-                },
-                color = AccentPrimary,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Black
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = note.message ?: "You have a new message", color = TextPrimary, fontSize = 14.sp)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = if (group.isUnread) AccentPrimary.copy(alpha = 0.08f) else Color.White.copy(alpha = 0.03f)
+            ),
+            border = BorderStroke(1.dp, if (group.isUnread) AccentPrimary.copy(alpha = 0.3f) else CardBorderAlt.copy(alpha = 0.2f)),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                UserAvatarInitials(
+                    displayName = senderName,
+                    size = 40.dp
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = senderName,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = formatRelativeTime(group.latestTimestamp),
+                                color = TextSecondary,
+                                fontSize = 11.sp
+                            )
+                            if (group.isUnread) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .background(AccentPrimary, CircleShape)
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = displayText,
+                        color = TextPrimary,
+                        fontSize = 13.sp
+                    )
+
+                    if (note.type == "FRIEND_REQUEST" && note.senderId.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = { onRespond(note.id, note.senderId, true) },
+                                colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary),
+                                modifier = Modifier.height(32.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Accept", fontSize = 11.sp, color = Color.White)
+                            }
+                            OutlinedButton(
+                                onClick = { onRespond(note.id, note.senderId, false) },
+                                modifier = Modifier.height(32.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Decline", fontSize = 11.sp, color = TextSecondary)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

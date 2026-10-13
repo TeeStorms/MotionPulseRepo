@@ -376,6 +376,39 @@ class CommunityViewModel(
         }
     }
 
+    fun markAllRead(notificationIds: List<String>) {
+        if (notificationIds.isEmpty()) return
+        viewModelScope.launch {
+            communityRepository.markAllNotificationsRead(userId, notificationIds)
+        }
+    }
+
+    fun deleteNotification(notificationId: String) {
+        viewModelScope.launch {
+            communityRepository.deleteNotification(userId, notificationId)
+        }
+    }
+
+    fun deleteNotifications(notificationIds: List<String>) {
+        if (notificationIds.isEmpty()) return
+        viewModelScope.launch {
+            communityRepository.clearAllNotifications(userId, notificationIds)
+        }
+    }
+
+    fun clearAllNotifications(notificationIds: List<String>) {
+        if (notificationIds.isEmpty()) return
+        viewModelScope.launch {
+            communityRepository.clearAllNotifications(userId, notificationIds)
+        }
+    }
+
+    fun cleanupOldNotifications() {
+        viewModelScope.launch {
+            communityRepository.cleanupOldNotifications(userId)
+        }
+    }
+
     class Factory(
         private val db: AppDatabase,
         private val userId: String,

@@ -547,6 +547,52 @@ describe("Motion.Pulse Firestore Security Rules", () => {
     );
   });
 
+  test("notifications: non-owner cannot delete another user's notification", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const adminDb = context.firestore();
+      await adminDb.collection("users").doc("bob").collection("notifications").doc("n1").set({
+        id: "n1",
+        senderId: "bob",
+        senderName: "Bob",
+        type: "NUDGE",
+        timestamp: Date.now(),
+        isRead: false
+      });
+      await adminDb.terminate();
+    });
+
+    const aliceDb = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(
+      aliceDb.collection("users").doc("bob").collection("notifications").doc("n1").delete()
+    );
+  });
+
+  test("notifications: create with an unexpected field is denied", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const adminDb = context.firestore();
+      await adminDb.collection("friendRequests").doc("alice_bob").set({
+        requesterUid: "alice",
+        recipientUid: "bob",
+        participants: ["alice", "bob"],
+        status: "ACCEPTED"
+      });
+      await adminDb.terminate();
+    });
+
+    const aliceDb = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(
+      aliceDb.collection("users").doc("bob").collection("notifications").doc("nudge_alice_bob_bad_field").set({
+        id: "nudge_alice_bob_bad_field",
+        senderId: "alice",
+        senderName: "Alice",
+        type: "NUDGE",
+        timestamp: Date.now(),
+        isRead: false,
+        unexpectedField: "malicious_payload"
+      })
+    );
+  });
+
   test("private profile: user cannot read or write another user's private profile", async () => {
     await testEnv.withSecurityRulesDisabled(async (context) => {
       const adminDb = context.firestore();

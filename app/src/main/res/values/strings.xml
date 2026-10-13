@@ -65,4 +65,5 @@
         vestibulum. Fusce dictum libero quis erat maximus, vitae volutpat diam dignissim.
     </string>
     <string name="settings_section_preferences">Preferences</string>
+    <string name="notifications_title">Notifications</string>
 </resources>

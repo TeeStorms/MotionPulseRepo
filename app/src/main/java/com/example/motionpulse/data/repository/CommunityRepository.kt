@@ -152,7 +152,9 @@ class CommunityRepository(
             senderId = senderId,
             senderName = senderName,
             type = "NUDGE",
-            timestamp = System.currentTimeMillis()
+            timestamp = System.currentTimeMillis(),
+            isRead = false,
+            message = "$senderName nudged you! Keep your streak going."
         )
         firestore.collection("users").document(targetUserId)
             .collection("notifications").document(notifId)
@@ -231,6 +233,61 @@ class CommunityRepository(
         firestore.collection("users").document(userId)
             .collection("notifications").document(notificationId)
             .update("isRead", true).await()
+    }
+
+    suspend fun markAllNotificationsRead(userId: String, notificationIds: List<String>) {
+        if (userId.isEmpty() || notificationIds.isEmpty()) return
+        notificationIds.chunked(500).forEach { chunk ->
+            val batch = firestore.batch()
+            chunk.forEach { notifId ->
+                val ref = firestore.collection("users").document(userId)
+                    .collection("notifications").document(notifId)
+                batch.update(ref, "isRead", true)
+            }
+            batch.commit().await()
+        }
+    }
+
+    suspend fun deleteNotification(userId: String, notificationId: String) {
+        if (userId.isEmpty() || notificationId.isEmpty()) return
+        firestore.collection("users").document(userId)
+            .collection("notifications").document(notificationId)
+            .delete().await()
+    }
+
+    suspend fun clearAllNotifications(userId: String, notificationIds: List<String>) {
+        if (userId.isEmpty() || notificationIds.isEmpty()) return
+        notificationIds.chunked(500).forEach { chunk ->
+            val batch = firestore.batch()
+            chunk.forEach { notifId ->
+                val ref = firestore.collection("users").document(userId)
+                    .collection("notifications").document(notifId)
+                batch.delete(ref)
+            }
+            batch.commit().await()
+        }
+    }
+
+    suspend fun cleanupOldNotifications(userId: String) {
+        if (userId.isEmpty()) return
+        val thirtyDaysAgo = System.currentTimeMillis() - (30L * 24 * 60 * 60 * 1000)
+        try {
+            val snapshot = firestore.collection("users").document(userId)
+                .collection("notifications")
+                .whereLessThan("timestamp", thirtyDaysAgo)
+                .limit(50)
+                .get().await()
+
+            if (!snapshot.isEmpty) {
+                val batch = firestore.batch()
+                snapshot.documents.forEach { doc ->
+                    batch.delete(doc.reference)
+                }
+                batch.commit().await()
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("CommunityRepository", "Error cleaning up old notifications for $userId", e)
+        }
     }
 
     fun getChallenges(userId: String): Flow<UiState<List<Challenge>>> = callbackFlow {
