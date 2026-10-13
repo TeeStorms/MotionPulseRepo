@@ -248,15 +248,14 @@ class AuthRepository(
             try {
                 val codeDocRef = firestore.collection("friendCodes").document(existingCode)
                 val doc = codeDocRef.get().await()
-                if (doc.exists()) {
-                    return existingCode
-                } else {
+                if (!doc.exists()) {
                     codeDocRef.set(mapOf("uid" to uid)).await()
-                    return existingCode
                 }
             } catch (e: Exception) {
-                // Failover to new code if error
+                // Ignore transient network errors; NEVER overwrite an existing code
+                android.util.Log.e("AuthRepository", "Error checking friendCodes/$existingCode: ${e.message}", e)
             }
+            return existingCode
         }
         return createUniqueFriendCodeDoc(uid)
     }

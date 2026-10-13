@@ -68,11 +68,13 @@ fun MotionPulseBottomNav(
                     Text(
                         text = screen.label,
                         fontSize = 10.sp,
-                        maxLines = 1
+                        maxLines = 1,
+                        softWrap = false,
+                        modifier = Modifier.wrapContentWidth(unbounded = true)
                     ) 
                 },
                 selected = isSelected,
-                alwaysShowLabel = false,
+                alwaysShowLabel = true,
                 onClick = { onNavigate(screen.route) },
                 colors = NavigationBarItemDefaults.colors(
                     selectedTextColor = BottomNavActive,

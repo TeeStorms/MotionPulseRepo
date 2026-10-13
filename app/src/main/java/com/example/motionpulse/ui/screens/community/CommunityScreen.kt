@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.PersonAdd
@@ -197,7 +198,15 @@ fun CommunityScreen(
                         Tab(
                             selected = selectedTab == index,
                             onClick = { selectedTab = index },
-                            text = { Text(text = title, fontWeight = FontWeight.Bold) }
+                            text = {
+                                Text(
+                                    text = title,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    maxLines = 1,
+                                    softWrap = false
+                                )
+                            }
                         )
                     }
                 }
@@ -258,11 +267,13 @@ fun CommunityScreen(
             if (showAddFriendOverlay) {
                 AddFriendOverlay(
                     userFriendCode = userProfile?.friendCode ?: "---",
+                    sentRequestsState = sentRequestsState,
                     onDismiss = { showAddFriendOverlay = false },
                     onSearch = { viewModel.searchByCode(it) },
                     searchResult = searchResult,
                     searchError = searchError,
-                    onSendRequest = { uid, name -> viewModel.sendFriendRequest(uid, name) }
+                    onSendRequest = { uid, name -> viewModel.sendFriendRequest(uid, name) },
+                    onCancelSentRequest = { viewModel.cancelSentRequest(it) }
                 )
             }
 
@@ -273,6 +284,7 @@ fun CommunityScreen(
                     sentRequestsState = sentRequestsState,
                     mutedUserIds = mutedUserIds,
                     onDismiss = { showFriendsManagement = false },
+                    onOpenAddFriend = { showFriendsManagement = false; showAddFriendOverlay = true },
                     onUnfriend = { viewModel.unfriend(it) },
                     onCancelSentRequest = { viewModel.cancelSentRequest(it) },
                     onMute = { viewModel.muteUser(it) },
@@ -585,6 +597,7 @@ fun FriendsManagementDialog(
     sentRequestsState: UiState<List<com.example.motionpulse.data.local.entity.FriendEntity>>,
     mutedUserIds: Set<String>,
     onDismiss: () -> Unit,
+    onOpenAddFriend: () -> Unit,
     onUnfriend: (String) -> Unit,
     onCancelSentRequest: (String) -> Unit,
     onMute: (String) -> Unit,
@@ -593,6 +606,7 @@ fun FriendsManagementDialog(
     onRetry: () -> Unit
 ) {
     var userToBlock by remember { mutableStateOf<UserProfileEntity?>(null) }
+    var userToUnfriend by remember { mutableStateOf<UserProfileEntity?>(null) }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -600,12 +614,14 @@ fun FriendsManagementDialog(
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Card(
-                modifier = Modifier.fillMaxWidth(0.95f).fillMaxHeight(0.85f),
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .heightIn(max = 560.dp),
                 colors = CardDefaults.cardColors(containerColor = CardBackground),
                 border = BorderStroke(1.dp, CardBorderAlt),
                 shape = RoundedCornerShape(24.dp)
             ) {
-                Column(modifier = Modifier.padding(20.dp).fillMaxSize()) {
+                Column(modifier = Modifier.padding(20.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -616,14 +632,18 @@ fun FriendsManagementDialog(
                             Icon(Icons.Default.Close, contentDescription = "Close", tint = TextSecondary)
                         }
                     }
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
 
                     val sentRequests = (sentRequestsState as? UiState.Success)?.data ?: emptyList()
                     val friends = (friendsState as? UiState.Success)?.data ?: emptyList()
 
                     if (friendsState is UiState.Error) {
-                        Column(modifier = Modifier.fillMaxWidth().weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
                             Text("⚠️", fontSize = 28.sp)
                             Spacer(modifier = Modifier.height(8.dp))
                             Text("Failed to load friends", color = TextPrimary)
@@ -633,17 +653,20 @@ fun FriendsManagementDialog(
                             }
                         }
                     } else if (friendsState is UiState.Loading) {
-                        Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator(color = AccentPrimary)
                         }
                     } else {
-                        LazyColumn(modifier = Modifier.fillMaxSize().weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
                             if (sentRequests.isNotEmpty()) {
                                 item {
                                     Text(text = "SENT REQUESTS", color = AccentPrimary, fontSize = 12.sp, fontWeight = FontWeight.Black)
                                     Spacer(modifier = Modifier.height(8.dp))
                                 }
-                                items(sentRequests) { req ->
+                                items(sentRequests, key = { it.id }) { req ->
                                     Card(
                                         modifier = Modifier.fillMaxWidth(),
                                         colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
@@ -673,57 +696,100 @@ fun FriendsManagementDialog(
 
                             if (friends.isEmpty() && sentRequests.isEmpty()) {
                                 item {
-                                    Box(modifier = Modifier.fillParentMaxHeight(0.5f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                        Text("No friends added yet. Tap '+' to add friends!", color = TextSecondary, textAlign = TextAlign.Center)
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 28.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Text("No friends added yet", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text("Connect with friends to compare streaks and duel!", color = TextSecondary, fontSize = 13.sp, textAlign = TextAlign.Center)
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        Button(
+                                            onClick = onOpenAddFriend,
+                                            colors = ButtonDefaults.buttonColors(containerColor = AccentPrimary),
+                                            shape = RoundedCornerShape(12.dp)
+                                        ) {
+                                            Text("Add a friend")
+                                        }
                                     }
                                 }
                             } else {
-                                items(friends) { friend ->
+                                items(friends, key = { it.uid }) { friend ->
                                     val isMuted = friend.uid in mutedUserIds
+                                    var menuExpanded by remember { mutableStateOf(false) }
+
                                     Card(
                                         modifier = Modifier.fillMaxWidth(),
                                         colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
                                         border = BorderStroke(1.dp, CardBorderAlt.copy(alpha = 0.2f))
                                     ) {
-                                        Column(modifier = Modifier.padding(16.dp)) {
+                                        Row(
+                                            modifier = Modifier
+                                                .padding(16.dp)
+                                                .fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
                                             Row(
                                                 verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                                modifier = Modifier.fillMaxWidth()
+                                                modifier = Modifier.weight(1f)
                                             ) {
-                                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                                    UserAvatarInitials(
-                                                        displayName = friend.displayName,
-                                                        size = 40.dp
-                                                    )
-                                                    Spacer(modifier = Modifier.width(12.dp))
-                                                    Column {
-                                                        Text(text = friend.displayName, color = TextPrimary, fontWeight = FontWeight.Bold)
+                                                UserAvatarInitials(
+                                                    displayName = friend.displayName,
+                                                    size = 40.dp
+                                                )
+                                                Spacer(modifier = Modifier.width(12.dp))
+                                                Column {
+                                                    Text(text = friend.displayName, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
                                                         Text(text = "Lvl ${friend.currentLevel} · ${friend.currentStreak}d streak", color = TextSecondary, fontSize = 12.sp)
+                                                        if (isMuted) {
+                                                            Spacer(modifier = Modifier.width(6.dp))
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(4.dp))
+                                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                            ) {
+                                                                Text("Muted", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
 
-                                            Spacer(modifier = Modifier.height(12.dp))
-
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                TextButton(onClick = { if (isMuted) onUnmute(friend.uid) else onMute(friend.uid) }) {
-                                                    Text(if (isMuted) "Unmute Nudges" else "Mute Nudges", color = TextSecondary, fontSize = 12.sp)
+                                            Box {
+                                                IconButton(onClick = { menuExpanded = true }) {
+                                                    Icon(Icons.Default.MoreVert, contentDescription = "More actions", tint = TextSecondary)
                                                 }
-                                                TextButton(onClick = { userToBlock = friend }) {
-                                                    Text("Block", color = Color.Red.copy(alpha = 0.8f), fontSize = 12.sp)
-                                                }
-                                                Button(
-                                                    onClick = { onUnfriend(friend.uid) },
-                                                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red.copy(alpha = 0.2f)),
-                                                    border = BorderStroke(1.dp, Color.Red.copy(alpha = 0.5f)),
-                                                    shape = RoundedCornerShape(12.dp)
+                                                DropdownMenu(
+                                                    expanded = menuExpanded,
+                                                    onDismissRequest = { menuExpanded = false },
+                                                    modifier = Modifier.background(CardBackground)
                                                 ) {
-                                                    Text("Unfriend", color = Color.Red, fontSize = 12.sp)
+                                                    DropdownMenuItem(
+                                                        text = { Text(if (isMuted) "Unmute nudges" else "Mute nudges", color = TextPrimary) },
+                                                        onClick = {
+                                                            menuExpanded = false
+                                                            if (isMuted) onUnmute(friend.uid) else onMute(friend.uid)
+                                                        }
+                                                    )
+                                                    DropdownMenuItem(
+                                                        text = { Text("Block", color = TextPrimary) },
+                                                        onClick = {
+                                                            menuExpanded = false
+                                                            userToBlock = friend
+                                                        }
+                                                    )
+                                                    DropdownMenuItem(
+                                                        text = { Text("Unfriend", color = Color.Red) },
+                                                        onClick = {
+                                                            menuExpanded = false
+                                                            userToUnfriend = friend
+                                                        }
+                                                    )
                                                 }
                                             }
                                         }
@@ -737,11 +803,37 @@ fun FriendsManagementDialog(
         }
     }
 
+    userToUnfriend?.let { friend ->
+        AlertDialog(
+            onDismissRequest = { userToUnfriend = null },
+            title = { Text("Unfriend ${friend.displayName}?", color = TextPrimary, fontWeight = FontWeight.Bold) },
+            text = { Text("Active duels with this friend will be cancelled, and they will be removed from your friends list.", color = TextSecondary) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onUnfriend(friend.uid)
+                        userToUnfriend = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                ) {
+                    Text("Unfriend", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { userToUnfriend = null }) {
+                    Text("Cancel", color = TextSecondary)
+                }
+            },
+            containerColor = CardBackground,
+            shape = RoundedCornerShape(24.dp)
+        )
+    }
+
     userToBlock?.let { friend ->
         AlertDialog(
             onDismissRequest = { userToBlock = null },
-            title = { Text("Block ${friend.displayName}?") },
-            text = { Text("This will remove your friendship, cancel active duels, and prevent them from contacting you.") },
+            title = { Text("Block ${friend.displayName}?", color = TextPrimary, fontWeight = FontWeight.Bold) },
+            text = { Text("This will remove your friendship, cancel active duels, and prevent them from contacting you.", color = TextSecondary) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -750,14 +842,16 @@ fun FriendsManagementDialog(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
                 ) {
-                    Text("Block")
+                    Text("Block", color = Color.White)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { userToBlock = null }) {
-                    Text("Cancel")
+                    Text("Cancel", color = TextSecondary)
                 }
-            }
+            },
+            containerColor = CardBackground,
+            shape = RoundedCornerShape(24.dp)
         )
     }
 }
@@ -1192,26 +1286,57 @@ fun FriendRequestItem(
     }
 }
 
+fun formatFriendCodeInput(input: String): String {
+    val clean = input.uppercase().replace(" ", "").replace("-", "")
+    if (clean.isEmpty()) return ""
+
+    var chars = clean
+    if (chars.startsWith("MP")) {
+        chars = chars.substring(2)
+    }
+
+    if (chars.length > 8) {
+        chars = chars.substring(0, 8)
+    }
+
+    if (chars.isEmpty()) return "MP-"
+
+    val sb = StringBuilder("MP-")
+    if (chars.length > 4) {
+        sb.append(chars.substring(0, 4)).append("-").append(chars.substring(4))
+    } else {
+        sb.append(chars)
+    }
+    return sb.toString()
+}
+
 @Composable
 fun AddFriendOverlay(
     userFriendCode: String,
+    sentRequestsState: UiState<List<com.example.motionpulse.data.local.entity.FriendEntity>>,
     onDismiss: () -> Unit,
     onSearch: (String) -> Unit,
     searchResult: UserProfileEntity?,
     searchError: String?,
-    onSendRequest: (String, String?) -> Unit
+    onSendRequest: (String, String?) -> Unit,
+    onCancelSentRequest: (String) -> Unit
 ) {
     var code by remember { mutableStateOf("") }
     val clipboardManager = LocalClipboardManager.current
     val context = LocalContext.current
-    
+
+    val sentRequests = (sentRequestsState as? UiState.Success)?.data ?: emptyList()
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color.Black.copy(alpha = 0.8f)
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Card(
-                modifier = Modifier.fillMaxWidth(0.9f).padding(vertical = 32.dp),
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .heightIn(max = 600.dp)
+                    .padding(vertical = 16.dp),
                 colors = CardDefaults.cardColors(containerColor = CardBackground),
                 border = BorderStroke(1.dp, CardBorderAlt),
                 shape = RoundedCornerShape(24.dp)
@@ -1221,13 +1346,17 @@ fun AddFriendOverlay(
                         .padding(24.dp)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(text = "Add Friend", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                         IconButton(onClick = onDismiss) {
                             Icon(Icons.Default.Close, contentDescription = "Close", tint = TextSecondary)
                         }
                     }
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Your Friend Code Card
@@ -1288,11 +1417,12 @@ fun AddFriendOverlay(
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
-                    
+
                     OutlinedTextField(
                         value = code,
-                        onValueChange = { code = it.uppercase() },
-                        label = { Text("Friend Code (MP-XXXX-XXXX)") },
+                        onValueChange = { code = formatFriendCodeInput(it) },
+                        label = { Text("Friend's code") },
+                        placeholder = { Text("MP-XXXX-XXXX") },
                         modifier = Modifier.fillMaxWidth(),
                         colors = TextFieldDefaults.colors(
                             unfocusedContainerColor = Color.Transparent,
@@ -1301,30 +1431,46 @@ fun AddFriendOverlay(
                             focusedTextColor = TextPrimary
                         ),
                         singleLine = true,
+                        maxLines = 1,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         keyboardActions = KeyboardActions(onSearch = { onSearch(code) }),
                         trailingIcon = {
-                            IconButton(onClick = { onSearch(code) }) {
-                                Icon(Icons.Default.Search, contentDescription = "Search", tint = AccentPrimary)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                TextButton(
+                                    onClick = {
+                                        clipboardManager.getText()?.text?.let {
+                                            code = formatFriendCodeInput(it)
+                                        }
+                                    }
+                                ) {
+                                    Text("Paste", color = AccentPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                                IconButton(onClick = { onSearch(code) }) {
+                                    Icon(Icons.Default.Search, contentDescription = "Search", tint = AccentPrimary)
+                                }
                             }
                         }
                     )
-                    
+
                     if (searchError != null) {
                         Text(text = searchError, color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
                     }
-                    
+
                     if (searchResult != null) {
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
                             border = BorderStroke(1.dp, CardBorderAlt.copy(alpha = 0.2f))
                         ) {
-                            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(HeaderGradient2Stop), contentAlignment = Alignment.Center) {
-                                    Text(text = searchResult.displayName.take(1).uppercase(), color = Color.White)
-                                }
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                UserAvatarInitials(
+                                    displayName = searchResult.displayName,
+                                    size = 40.dp
+                                )
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Text(text = searchResult.displayName, color = TextPrimary, modifier = Modifier.weight(1f), fontWeight = FontWeight.Bold)
                                 Button(
@@ -1333,6 +1479,35 @@ fun AddFriendOverlay(
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
                                     Text("Invite", fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    }
+
+                    if (sentRequests.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text(text = "SENT REQUESTS", color = AccentPrimary, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                        Spacer(modifier = Modifier.height(10.dp))
+                        sentRequests.forEach { req ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 8.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.05f)),
+                                border = BorderStroke(1.dp, CardBorderAlt.copy(alpha = 0.3f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(text = "Pending Request", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        Text(text = "Waiting for response...", color = TextPrimary, fontSize = 13.sp)
+                                    }
+                                    TextButton(onClick = { onCancelSentRequest(req.id) }) {
+                                        Text("Cancel", color = Color.Red, fontSize = 12.sp)
+                                    }
                                 }
                             }
                         }
@@ -1526,7 +1701,11 @@ fun FeedTab(
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 item {
-                    Text(text = "Today's feed", color = TextSecondary, fontSize = 14.sp)
+                    Text(
+                        text = stringResource(id = R.string.feed_heading_recent_activity),
+                        color = TextSecondary,
+                        fontSize = 14.sp
+                    )
                 }
                 items(feed) { entry ->
                     FeedItem(entry, currentUserId, viewModel)
@@ -1551,10 +1730,11 @@ fun FeedItem(entry: ActivityFeedEntry, currentUserId: String, viewModel: Communi
         Spacer(modifier = Modifier.width(16.dp))
         
         Column(modifier = Modifier.weight(1f)) {
+            val trimmedName = entry.actorName.trim()
             val message = when (entry.eventType) {
-                FeedEventType.STREAK_MILESTONE -> "${entry.actorName} hit a ${entry.streakCount}-day streak 🔥"
-                FeedEventType.ALL_HABITS_COMPLETED -> "${entry.actorName} completed all habits today"
-                FeedEventType.STREAK_AT_RISK -> "${entry.actorName} hasn't logged today"
+                FeedEventType.STREAK_MILESTONE -> "$trimmedName reached a ${entry.streakCount ?: 0}-day streak!"
+                FeedEventType.ALL_HABITS_COMPLETED -> "$trimmedName completed all habits"
+                FeedEventType.STREAK_AT_RISK -> "$trimmedName hasn't logged today"
             }
             
             Text(text = message, color = TextPrimary, fontWeight = FontWeight.Bold)

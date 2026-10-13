@@ -66,4 +66,5 @@
     </string>
     <string name="settings_section_preferences">Preferences</string>
     <string name="notifications_title">Notifications</string>
+    <string name="feed_heading_recent_activity">Recent activity</string>
 </resources>
