@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.motionpulse.data.local.entity.BadgeType
+import com.example.motionpulse.ui.components.responsiveContentWidth
 import com.example.motionpulse.ui.theme.*
 import com.example.motionpulse.ui.viewmodels.ProfileViewModel
 
@@ -61,8 +62,10 @@ fun BadgesGalleryScreen(
             )
 
             LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                modifier = Modifier.fillMaxSize(),
+                columns = GridCells.Adaptive(minSize = 100.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .responsiveContentWidth(600.dp),
                 contentPadding = PaddingValues(24.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp)

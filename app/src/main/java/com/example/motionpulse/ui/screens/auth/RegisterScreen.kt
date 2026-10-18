@@ -42,6 +42,7 @@ import com.example.motionpulse.domain.auth.AuthState
 import com.example.motionpulse.domain.auth.AuthViewModel
 import com.example.motionpulse.ui.components.GradientButton
 import com.example.motionpulse.ui.components.MotionPulseTextField
+import com.example.motionpulse.ui.components.responsiveContentWidth
 import com.example.motionpulse.ui.theme.*
 
 @Composable
@@ -91,7 +92,9 @@ fun RegisterScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundDark)
-            .verticalScroll(rememberScrollState())
+            .imePadding()
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // Header
         Box(
@@ -112,7 +115,7 @@ fun RegisterScreen(
 
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .responsiveContentWidth(600.dp)
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {

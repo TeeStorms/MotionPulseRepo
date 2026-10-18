@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import com.example.motionpulse.ui.theme.AccentPrimary
 import com.example.motionpulse.ui.theme.TextPrimary
@@ -20,43 +21,50 @@ fun DashboardProgressCircle(
     totalCount: Int
 ) {
     val progress = if (totalCount > 0) doneCount.toFloat() / totalCount else 0f
-    
-    Box(
+
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 32.dp),
+            .padding(vertical = 24.dp),
         contentAlignment = Alignment.Center
     ) {
-        // Background Circle (Track)
-        CircularProgressIndicator(
-            progress = { 1f },
-            modifier = Modifier.size(200.dp),
-            color = TextSecondary.copy(alpha = 0.1f),
-            strokeWidth = 16.dp,
-            strokeCap = StrokeCap.Round,
-        )
-        
-        // Foreground Circle (Progress)
-        CircularProgressIndicator(
-            progress = { progress },
-            modifier = Modifier.size(200.dp),
-            color = AccentPrimary,
-            strokeWidth = 16.dp,
-            strokeCap = StrokeCap.Round,
-        )
-        
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "$doneCount/$totalCount",
-                color = TextPrimary,
-                fontSize = 48.sp,
-                fontWeight = FontWeight.Bold
+        val circleSize = min(240.dp, maxWidth * 0.6f)
+
+        Box(
+            modifier = Modifier.size(circleSize),
+            contentAlignment = Alignment.Center
+        ) {
+            // Background Circle (Track)
+            CircularProgressIndicator(
+                progress = { 1f },
+                modifier = Modifier.fillMaxSize(),
+                color = TextSecondary.copy(alpha = 0.1f),
+                strokeWidth = 16.dp,
+                strokeCap = StrokeCap.Round,
             )
-            Text(
-                text = "habits today",
-                color = TextSecondary,
-                fontSize = 14.sp
+
+            // Foreground Circle (Progress)
+            CircularProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxSize(),
+                color = AccentPrimary,
+                strokeWidth = 16.dp,
+                strokeCap = StrokeCap.Round,
             )
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "$doneCount/$totalCount",
+                    color = TextPrimary,
+                    fontSize = 44.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "habits today",
+                    color = TextSecondary,
+                    fontSize = 14.sp
+                )
+            }
         }
     }
 }

@@ -23,6 +23,7 @@ import com.example.motionpulse.ui.theme.*
 import java.time.Duration
 import java.time.Instant
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun DashboardHabitCard(
     habit: HabitEntity,
@@ -85,14 +86,17 @@ fun DashboardHabitCard(
             }
         }
     ) {
-        Row(
+        FlowRow(
             modifier = Modifier
                 .padding(20.dp)
                 .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalArrangement = Arrangement.Center
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f, fill = false)
+            ) {
                 // Icon
                 Icon(
                     imageVector = if (isCompleted) Icons.Outlined.MonitorHeart else Icons.Outlined.Remove,
@@ -100,9 +104,9 @@ fun DashboardHabitCard(
                     tint = if (isCompleted) AccentPrimary else TextSecondary.copy(alpha = 0.6f),
                     modifier = Modifier.size(24.dp)
                 )
-                
-                Spacer(modifier = Modifier.width(20.dp))
-                
+
+                Spacer(modifier = Modifier.width(16.dp))
+
                 Column {
                     Text(
                         text = habit.title,
@@ -117,6 +121,8 @@ fun DashboardHabitCard(
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.width(12.dp))
 
             // Action Button
             Surface(

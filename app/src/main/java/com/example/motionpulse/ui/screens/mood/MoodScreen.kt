@@ -28,6 +28,7 @@ import com.example.motionpulse.data.local.entity.MoodLevel
 import com.example.motionpulse.ui.components.GradientButton
 import com.example.motionpulse.ui.components.MotionPulseBottomNav
 import com.example.motionpulse.ui.components.MotionPulseTextField
+import com.example.motionpulse.ui.components.responsiveContentWidth
 import com.example.motionpulse.ui.screens.dashboard.components.MotionPulseHeader
 import com.example.motionpulse.ui.theme.*
 import com.example.motionpulse.ui.viewmodels.MoodViewModel
@@ -119,7 +120,9 @@ fun MoodScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .imePadding()
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Header
             MotionPulseHeader(
@@ -129,7 +132,7 @@ fun MoodScreen(
 
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .responsiveContentWidth(600.dp)
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -201,11 +204,12 @@ fun MoodScreen(
                         
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        LazyRow(
+                        FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            items(MoodFactor.entries) { factor ->
+                            MoodFactor.entries.forEach { factor ->
                                 val isSelected = selectedFactor == factor
                                 FilterChip(
                                     selected = isSelected,

@@ -36,9 +36,10 @@ fun SettingItem(
         Text(
             text = label,
             color = labelColor,
-            fontSize = 18.sp,
+            fontSize = 15.sp,
+            lineHeight = 22.sp,
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(20.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
         )
     }
 }

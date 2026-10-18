@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.sp
 import com.example.motionpulse.domain.auth.AuthState
 import com.example.motionpulse.domain.auth.AuthViewModel
 import com.example.motionpulse.ui.components.GradientButton
+import com.example.motionpulse.ui.components.responsiveContentWidth
 import com.example.motionpulse.ui.screens.auth.components.AuthOverlay
 import com.example.motionpulse.ui.theme.*
 import kotlinx.coroutines.delay
@@ -49,6 +50,7 @@ fun EmailVerificationScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .responsiveContentWidth(600.dp)
                 .padding(24.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,

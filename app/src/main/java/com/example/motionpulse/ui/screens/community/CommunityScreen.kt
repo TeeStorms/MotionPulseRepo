@@ -1923,7 +1923,13 @@ fun LeaderboardItem(
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = profile.displayName, color = TextPrimary, fontWeight = FontWeight.Bold)
+                Text(
+                    text = profile.displayName,
+                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
                 Text(text = "Lvl ${profile.currentLevel}", color = TextSecondary, fontSize = 12.sp)
             }
             

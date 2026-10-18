@@ -73,55 +73,77 @@ fun StatsScreen(
                 item {
                     Spacer(modifier = Modifier.height(32.dp))
                     
-                    // Summary Stats Grid
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(IntrinsicSize.Min)
-                    ) {
-                        StatBox(
-                            value = "${summaryStats.doneToday}/${summaryStats.totalHabits}",
-                            label = "Done Today",
+                    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+                    val isNarrow = configuration.screenWidthDp < 360
+
+                    if (isNarrow) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            StatBox(value = "${summaryStats.doneToday}/${summaryStats.totalHabits}", label = "Done Today", modifier = Modifier.fillMaxWidth())
+                            StatBox(value = "${summaryStats.currentStreak}d", label = "Current Streak", modifier = Modifier.fillMaxWidth())
+                            StatBox(value = "${summaryStats.totalCompleted}", label = "Total Completed", modifier = Modifier.fillMaxWidth())
+                            StatBox(
+                                value = "${summaryStats.weeklyPercent}%",
+                                label = "This week",
+                                trend = summaryStats.weeklyTrend,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(if (isCelebrating) 2.dp else 0.dp, if (isCelebrating) AccentPrimary else Color.Transparent, RoundedCornerShape(16.dp))
+                            )
+                        }
+                    } else {
+                        // Summary Stats Grid
+                        Row(
                             modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        StatBox(
-                            value = "${summaryStats.currentStreak}d",
-                            label = "Current Streak",
+                                .fillMaxWidth()
+                                .height(IntrinsicSize.Min)
+                        ) {
+                            StatBox(
+                                value = "${summaryStats.doneToday}/${summaryStats.totalHabits}",
+                                label = "Done Today",
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            StatBox(
+                                value = "${summaryStats.currentStreak}d",
+                                label = "Current Streak",
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
                             modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(IntrinsicSize.Min)
-                    ) {
-                        StatBox(
-                            value = "${summaryStats.totalCompleted}",
-                            label = "Total Completed",
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        StatBox(
-                            value = "${summaryStats.weeklyPercent}%",
-                            label = "This week",
-                            trend = summaryStats.weeklyTrend,
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .border(
-                                    if (isCelebrating) 2.dp else 0.dp, 
-                                    if (isCelebrating) AccentPrimary else Color.Transparent, 
-                                    RoundedCornerShape(16.dp)
-                                )
-                        )
+                                .fillMaxWidth()
+                                .height(IntrinsicSize.Min)
+                        ) {
+                            StatBox(
+                                value = "${summaryStats.totalCompleted}",
+                                label = "Total Completed",
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            StatBox(
+                                value = "${summaryStats.weeklyPercent}%",
+                                label = "This week",
+                                trend = summaryStats.weeklyTrend,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .border(
+                                        if (isCelebrating) 2.dp else 0.dp, 
+                                        if (isCelebrating) AccentPrimary else Color.Transparent, 
+                                        RoundedCornerShape(16.dp)
+                                    )
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(32.dp))

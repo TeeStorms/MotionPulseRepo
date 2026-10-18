@@ -171,6 +171,7 @@ fun LandingScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
+            .windowInsetsPadding(WindowInsets.systemBars)
             .semantics { contentDescription = "Motion.Pulse intro animation" },
         contentAlignment = Alignment.Center
     ) {

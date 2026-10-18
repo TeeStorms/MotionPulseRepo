@@ -131,17 +131,16 @@ fun AddHabitOverlay(
             
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 val categories = listOf("Mind & Focus", "Fitness and Health", "Daily Routine", "Other")
                 categories.forEach { cat ->
                     val isActive = if (cat == "Other") isOtherSelected else (selectedCategory == cat && !isOtherSelected)
                     CategoryTag(
-                        label = cat, // Displays truncated labels to ensure consistent fit within the category row.
+                        label = cat,
                         isActive = isActive,
                         onClick = {
                             if (cat == "Other") {
