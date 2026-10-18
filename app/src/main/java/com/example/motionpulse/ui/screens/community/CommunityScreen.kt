@@ -2484,3 +2484,44 @@ fun formatTimeAgo(timestamp: Long): String {
         }
     }
 }
+
+@AdaptivePreviews
+@Composable
+private fun FriendsManagementDialogPreview() {
+    MotionPulseTheme {
+        FriendsManagementDialog(
+            friendsState = UiState.Success(
+                listOf(
+                    UserProfileEntity(uid = "1", displayName = "Elizabeth", currentLevel = 5, currentStreak = 12)
+                )
+            ),
+            sentRequestsState = UiState.Empty,
+            mutedUserIds = emptySet(),
+            onDismiss = {},
+            onOpenAddFriend = {},
+            onUnfriend = {},
+            onCancelSentRequest = {},
+            onMute = {},
+            onUnmute = {},
+            onBlock = {},
+            onRetry = {}
+        )
+    }
+}
+
+@AdaptivePreviews
+@Composable
+private fun AddFriendOverlayPreview() {
+    MotionPulseTheme {
+        AddFriendOverlay(
+            userFriendCode = "MP-UDPS-N7K3",
+            sentRequestsState = UiState.Empty,
+            onDismiss = {},
+            onSearch = {},
+            searchResult = null,
+            searchError = null,
+            onSendRequest = { _, _ -> },
+            onCancelSentRequest = {}
+        )
+    }
+}

@@ -39,6 +39,12 @@ import com.example.motionpulse.domain.auth.AuthViewModel
 import com.example.motionpulse.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
 
+/**
+ * The intro animation settles at ~6.0s (6000ms), and the remaining video (from 6.1s to 8.0s) is a static hold.
+ * Set to 6000L to exit when settled, or 8000L to hold for the full length.
+ */
+private const val INTRO_EXIT_AFTER_MS = 6000L
+
 @OptIn(UnstableApi::class)
 @Composable
 fun LandingScreen(
@@ -89,13 +95,6 @@ fun LandingScreen(
         }
     }
 
-    // Navigate only when BOTH video has ended/skipped AND session check has completed
-    LaunchedEffect(isVideoEnded, isSessionChecked) {
-        if (isVideoEnded && isSessionChecked) {
-            onTimeout()
-        }
-    }
-
     // ExoPlayer Setup & Lifecycle Management
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build().apply {
@@ -106,6 +105,24 @@ fun LandingScreen(
             volume = 0f
             setAudioAttributes(AudioAttributes.DEFAULT, false) // Do not request audio focus
             prepare()
+        }
+    }
+
+    // Poll currentPosition every 100ms while video is playing
+    LaunchedEffect(exoPlayer, isVideoEnded) {
+        while (!isVideoEnded) {
+            if (exoPlayer.currentPosition >= INTRO_EXIT_AFTER_MS) {
+                isVideoEnded = true
+                break
+            }
+            delay(100)
+        }
+    }
+
+    // Navigate only when BOTH video threshold reached/ended/skipped AND session check completed
+    LaunchedEffect(isVideoEnded, isSessionChecked) {
+        if (isVideoEnded && isSessionChecked) {
+            onTimeout()
         }
     }
 
@@ -162,7 +179,7 @@ fun LandingScreen(
                 PlayerView(ctx).apply {
                     player = exoPlayer
                     useController = false
-                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                 }
             },
             modifier = Modifier
@@ -170,7 +187,7 @@ fun LandingScreen(
                 .alpha(videoAlpha)
         )
 
-        // Show "Checking your session..." caption if video finished but session check is still running
+        // Show "Checking your session..." caption if video threshold reached but session check is still running
         if (isVideoEnded && !isSessionChecked) {
             Box(
                 modifier = Modifier

@@ -83,3 +83,11 @@ fun StatBox(
         }
     }
 }
+
+@AdaptivePreviews
+@Composable
+private fun StatBoxPreview() {
+    MotionPulseTheme {
+        StatBox(value = "1,250 XP", label = "Weekly Score", trend = 1)
+    }
+}

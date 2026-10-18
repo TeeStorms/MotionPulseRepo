@@ -148,3 +148,15 @@ fun HabitCard(
         }
     }
 }
+
+@AdaptivePreviews
+@Composable
+private fun HabitCardPreview() {
+    MotionPulseTheme {
+        HabitCard(
+            habit = HabitEntity(id = "1", title = "Morning Run 5K", category = "Fitness"),
+            isCompletedToday = true,
+            onClick = {}
+        )
+    }
+}
