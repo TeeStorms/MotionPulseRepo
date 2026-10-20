@@ -1,20 +1,16 @@
 package com.example.motionpulse.ui.screens.habits
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -86,124 +82,127 @@ fun HabitsScreen(
             onRefresh = { viewModel.refreshHabits() },
             modifier = Modifier.padding(padding)
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize()
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 96.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Header
-                MotionPulseHeader(
-                    title = "My Habits",
-                    gradient = HeaderGradient2Stop
-                )
+                item {
+                    MotionPulseHeader(
+                        title = "My Habits",
+                        gradient = HeaderGradient2Stop
+                    )
+                }
 
-                Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-                    Spacer(modifier = Modifier.height(24.dp))
+                item {
+                    Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+                        Spacer(modifier = Modifier.height(24.dp))
 
-                    // Search Bar
-                    MotionPulseTextField(
-                        value = searchQuery,
-                        onValueChange = { viewModel.setSearchQuery(it) },
-                        placeholder = "Search habits...",
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary) },
-                        trailingIcon = if (searchQuery.isNotEmpty()) {
-                            {
-                                IconButton(onClick = { viewModel.setSearchQuery("") }) {
-                                    Icon(Icons.Default.Clear, contentDescription = null, tint = TextSecondary)
+                        // Search Bar
+                        MotionPulseTextField(
+                            value = searchQuery,
+                            onValueChange = { viewModel.setSearchQuery(it) },
+                            placeholder = "Search habits...",
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary) },
+                            trailingIcon = if (searchQuery.isNotEmpty()) {
+                                {
+                                    IconButton(onClick = { viewModel.setSearchQuery("") }) {
+                                        Icon(Icons.Default.Clear, contentDescription = null, tint = TextSecondary)
+                                    }
                                 }
+                            } else null
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Filters
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            CategoryTag(
+                                label = "All",
+                                isActive = selectedCategory == null,
+                                onClick = { viewModel.setCategoryFilter(null) }
+                            )
+                            CategoryTag(
+                                label = "Mind & Focus",
+                                isActive = selectedCategory == "Mind & Focus",
+                                onClick = { viewModel.setCategoryFilter("Mind & Focus") }
+                            )
+                            CategoryTag(
+                                label = "Fitness and Health",
+                                isActive = selectedCategory == "Fitness and Health",
+                                onClick = { viewModel.setCategoryFilter("Fitness and Health") }
+                            )
+                            CategoryTag(
+                                label = "Daily Routine",
+                                isActive = selectedCategory == "Daily Routine",
+                                onClick = { viewModel.setCategoryFilter("Daily Routine") }
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+                }
+
+                items(
+                    items = allHabitsWithStatus,
+                    key = { it.habit.id }
+                ) { item ->
+                    val dismissState = rememberSwipeToDismissBoxState(
+                        confirmValueChange = {
+                            when (it) {
+                                SwipeToDismissBoxValue.StartToEnd -> {
+                                    habitToEdit = item.habit
+                                    showAddOverlay = true
+                                    false
+                                }
+                                else -> false
                             }
-                        } else null
+                        }
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Box(modifier = Modifier.padding(horizontal = 24.dp)) {
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            backgroundContent = {
+                                val color = when (dismissState.dismissDirection) {
+                                    SwipeToDismissBoxValue.StartToEnd -> Color.Blue.copy(alpha = 0.5f)
+                                    else -> Color.Transparent
+                                }
+                                val icon = when (dismissState.dismissDirection) {
+                                    SwipeToDismissBoxValue.StartToEnd -> Icons.Default.Edit
+                                    else -> Icons.Default.Add
+                                }
+                                val alignment = when (dismissState.dismissDirection) {
+                                    SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                                    else -> Alignment.Center
+                                }
 
-                    // Filters
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        CategoryTag(
-                            label = "All",
-                            isActive = selectedCategory == null,
-                            onClick = { viewModel.setCategoryFilter(null) }
-                        )
-                        CategoryTag(
-                            label = "Mind & Focus",
-                            isActive = selectedCategory == "Mind & Focus",
-                            onClick = { viewModel.setCategoryFilter("Mind & Focus") }
-                        )
-                        CategoryTag(
-                            label = "Fitness and Health",
-                            isActive = selectedCategory == "Fitness and Health",
-                            onClick = { viewModel.setCategoryFilter("Fitness and Health") }
-                        )
-                        CategoryTag(
-                            label = "Daily Routine",
-                            isActive = selectedCategory == "Daily Routine",
-                            onClick = { viewModel.setCategoryFilter("Daily Routine") }
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        items(
-                            items = allHabitsWithStatus,
-                            key = { it.habit.id }
-                        ) { item ->
-                            val dismissState = rememberSwipeToDismissBoxState(
-                                confirmValueChange = {
-                                    when (it) {
-                                        SwipeToDismissBoxValue.StartToEnd -> {
-                                            habitToEdit = item.habit
-                                            showAddOverlay = true
-                                            false
-                                        }
-                                        else -> false
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(color, RoundedCornerShape(20.dp))
+                                        .padding(horizontal = 20.dp),
+                                    contentAlignment = alignment
+                                ) {
+                                    Icon(icon, contentDescription = null, tint = Color.White)
+                                }
+                            }
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column {
+                                    IconButton(onClick = { viewModel.reorderHabit(item.habit, moveUp = true) }) {
+                                        Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Move Up", tint = TextSecondary)
+                                    }
+                                    IconButton(onClick = { viewModel.reorderHabit(item.habit, moveUp = false) }) {
+                                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Move Down", tint = TextSecondary)
                                     }
                                 }
-                            )
-
-                            SwipeToDismissBox(
-                                state = dismissState,
-                                backgroundContent = {
-                                    val color = when (dismissState.dismissDirection) {
-                                        SwipeToDismissBoxValue.StartToEnd -> Color.Blue.copy(alpha = 0.5f)
-                                        else -> Color.Transparent
-                                    }
-                                    val icon = when (dismissState.dismissDirection) {
-                                        SwipeToDismissBoxValue.StartToEnd -> Icons.Default.Edit
-                                        else -> Icons.Default.Add
-                                    }
-                                    val alignment = when (dismissState.dismissDirection) {
-                                        SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
-                                        else -> Alignment.Center
-                                    }
-
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(color, RoundedCornerShape(20.dp))
-                                            .padding(horizontal = 20.dp),
-                                        contentAlignment = alignment
-                                    ) {
-                                        Icon(icon, contentDescription = null, tint = Color.White)
-                                    }
-                                }
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Column {
-                                        IconButton(onClick = { viewModel.reorderHabit(item.habit, moveUp = true) }) {
-                                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Move Up", tint = TextSecondary)
-                                        }
-                                        IconButton(onClick = { viewModel.reorderHabit(item.habit, moveUp = false) }) {
-                                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Move Down", tint = TextSecondary)
-                                        }
-                                    }
-                                    
-                                    Box(modifier = Modifier.weight(1f)) {
+                                
+                                Box(modifier = Modifier.weight(1f)) {
                                     HabitCard(
                                         habit = item.habit,
                                         isCompletedToday = item.isCompletedToday,
@@ -213,13 +212,16 @@ fun HabitsScreen(
                                         onRemoveProgress = { viewModel.removeHabitProgress(item.habit) },
                                         onClick = { onNavigateToDetail(item.habit.id) }
                                     )
-                                    }
                                 }
                             }
                         }
-                        
-                        if (archivedHabits.isNotEmpty()) {
-                            item {
+                    }
+                }
+                
+                if (archivedHabits.isNotEmpty()) {
+                    item {
+                        Box(modifier = Modifier.padding(horizontal = 24.dp)) {
+                            Column {
                                 Spacer(modifier = Modifier.height(32.dp))
                                 TextButton(
                                     onClick = { showArchived = !showArchived },
@@ -238,33 +240,33 @@ fun HabitsScreen(
                                     }
                                 }
                             }
+                        }
+                    }
 
-                            if (showArchived) {
-                                items(archivedHabits) { habit ->
-                                    Card(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 4.dp)
-                                            .border(1.dp, CardBorderAlt, RoundedCornerShape(16.dp)),
-                                        colors = CardDefaults.cardColors(containerColor = CardBackground.copy(alpha = 0.5f)),
-                                        shape = RoundedCornerShape(16.dp)
+                    if (showArchived) {
+                        items(archivedHabits, key = { it.id }) { habit ->
+                            Box(modifier = Modifier.padding(horizontal = 24.dp)) {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp)
+                                        .border(1.dp, CardBorderAlt, RoundedCornerShape(16.dp)),
+                                    colors = CardDefaults.cardColors(containerColor = CardBackground.copy(alpha = 0.5f)),
+                                    shape = RoundedCornerShape(16.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Row(
-                                            modifier = Modifier.padding(16.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(text = habit.title, color = TextSecondary, fontSize = 16.sp)
-                                            IconButton(onClick = { viewModel.unarchiveHabit(habit) }) {
-                                                Icon(Icons.Default.Restore, contentDescription = "Restore", tint = AccentPrimary)
-                                            }
+                                        Text(text = habit.title, color = TextSecondary, fontSize = 16.sp)
+                                        IconButton(onClick = { viewModel.unarchiveHabit(habit) }) {
+                                            Icon(Icons.Default.Restore, contentDescription = "Restore", tint = AccentPrimary)
                                         }
                                     }
                                 }
                             }
                         }
-
-                        item { Spacer(modifier = Modifier.height(80.dp)) }
                     }
                 }
             }

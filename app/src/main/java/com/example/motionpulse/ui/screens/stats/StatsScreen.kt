@@ -55,24 +55,21 @@ fun StatsScreen(
         },
         containerColor = BackgroundDark
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            MotionPulseHeader(
-                title = "Your Rhythm",
-                todayMood = todayMood
-            )
-
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 24.dp)
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 96.dp)
             ) {
                 item {
+                    MotionPulseHeader(
+                        title = "Your Rhythm",
+                        todayMood = todayMood
+                    )
                     Spacer(modifier = Modifier.height(32.dp))
-                    
+                }
+
+                item {
+                    Box(modifier = Modifier.padding(horizontal = 24.dp)) {
                     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
                     val isNarrow = configuration.screenWidthDp < 360
 
@@ -145,9 +142,13 @@ fun StatsScreen(
                             )
                         }
                     }
+                    }
+                }
 
+                item {
                     Spacer(modifier = Modifier.height(32.dp))
-
+                    Box(modifier = Modifier.padding(horizontal = 24.dp)) {
+                        Column {
                     val correlationData by viewModel.weeklyCorrelationData.collectAsState()
                     val insight by viewModel.correlationInsight.collectAsState()
                     val bestDay by viewModel.bestDayInfo.collectAsState()
@@ -163,6 +164,8 @@ fun StatsScreen(
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
+                        }
+                    }
                 }
             }
         }

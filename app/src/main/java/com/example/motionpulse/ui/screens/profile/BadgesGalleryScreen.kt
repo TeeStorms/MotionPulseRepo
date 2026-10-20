@@ -39,41 +39,51 @@ fun BadgesGalleryScreen(
     val allBadgeTypes = BadgeType.values()
 
     Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Badge Gallery", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = TextPrimary)
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = BackgroundDark)
-            )
-        },
         containerColor = BackgroundDark
     ) { padding ->
-        Column(modifier = Modifier.padding(padding)) {
-            Text(
-                text = "Total Badges: ${state.badgeCount}/${allBadgeTypes.size}",
-                color = TextSecondary,
-                modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
-
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 100.dp),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .responsiveContentWidth(600.dp),
-                contentPadding = PaddingValues(24.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
-            ) {
-                items(allBadgeTypes) { badgeType ->
-                    val isUnlocked = unlockedBadgeTypes.contains(badgeType)
-                    BadgeItem(badgeType = badgeType, isUnlocked = isUnlocked)
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 100.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .responsiveContentWidth(600.dp),
+            contentPadding = PaddingValues(24.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .windowInsetsPadding(WindowInsets.statusBars),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = TextPrimary)
+                        }
+                        Text(
+                            text = "Badge Gallery",
+                            color = TextPrimary,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Total Badges: ${state.badgeCount}/${allBadgeTypes.size}",
+                        color = TextSecondary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
+            }
+
+            items(allBadgeTypes) { badgeType ->
+                val isUnlocked = unlockedBadgeTypes.contains(badgeType)
+                BadgeItem(badgeType = badgeType, isUnlocked = isUnlocked)
             }
         }
     }

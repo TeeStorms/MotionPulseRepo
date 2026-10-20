@@ -115,42 +115,51 @@ fun CommunityScreen(
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Header with Notification Bell and Add Friend
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    MotionPulseHeader(
-                        title = "Pulse Community",
-                        subtitle = "MOTION.PULSE"
-                    )
-                    
-                    Row(
-                        modifier = Modifier.align(Alignment.TopEnd).padding(top = 16.dp, end = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = { showFriendsManagement = true }) {
-                            Icon(Icons.Default.Group, contentDescription = "Manage Friends", tint = TextPrimary)
-                        }
+                MotionPulseHeader(
+                    title = "Pulse Community",
+                    topBarContent = {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "MOTION.PULSE",
+                                color = TextPrimary,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 1.5.sp
+                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(onClick = { showFriendsManagement = true }) {
+                                    Icon(Icons.Default.Group, contentDescription = "Manage Friends", tint = TextPrimary)
+                                }
 
-                        IconButton(onClick = { showAddFriendOverlay = true }) {
-                            BadgedBox(
-                                badge = {
-                                    if (incomingRequestsCount > 0) {
-                                        Badge { Text(incomingRequestsCount.toString()) }
+                                IconButton(onClick = { showAddFriendOverlay = true }) {
+                                    BadgedBox(
+                                        badge = {
+                                            if (incomingRequestsCount > 0) {
+                                                Badge { Text(incomingRequestsCount.toString()) }
+                                            }
+                                        }
+                                    ) {
+                                        Icon(Icons.Default.PersonAdd, contentDescription = "Add Friend", tint = TextPrimary)
                                     }
                                 }
-                            ) {
-                                Icon(Icons.Default.PersonAdd, contentDescription = "Add Friend", tint = TextPrimary)
-                            }
-                        }
 
-                        IconButton(onClick = { showNotificationTray = true }) {
-                            BadgedBox(
-                                badge = { if (unreadCount > 0) Badge { Text(unreadCount.toString()) } }
-                            ) {
-                                Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = TextPrimary)
+                                IconButton(onClick = { showNotificationTray = true }) {
+                                    BadgedBox(
+                                        badge = { if (unreadCount > 0) Badge { Text(unreadCount.toString()) } }
+                                    ) {
+                                        Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = TextPrimary)
+                                    }
+                                }
                             }
                         }
                     }
-                }
+                )
 
                 // One-time dismissible tip
                 if (!hasSeenTip) {

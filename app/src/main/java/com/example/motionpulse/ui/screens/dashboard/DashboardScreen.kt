@@ -88,19 +88,21 @@ fun DashboardScreen(
             onRefresh = { viewModel.refreshHabits() },
             modifier = Modifier.padding(padding)
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                MotionPulseHeader(
-                    title = "$greeting,\n${userProfile?.displayName ?: "User"}",
-                    showProfileIcon = true,
-                    userName = userProfile?.displayName,
-                    todayMood = todayMood
-                )
-
+            Box(modifier = Modifier.fillMaxSize()) {
                 LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 24.dp)
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 96.dp)
                 ) {
+                    item {
+                        MotionPulseHeader(
+                            title = "$greeting,\n${userProfile?.displayName ?: "User"}",
+                            showProfileIcon = true,
+                            userName = userProfile?.displayName,
+                            todayMood = todayMood
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
                     item {
                         if (isSyncFailed) {
                             Box(
@@ -123,16 +125,19 @@ fun DashboardScreen(
 
                     item {
                         val doneCount = habitsWithStatus.count { it.isCompletedToday }
-                        DashboardProgressCircle(
-                            doneCount = doneCount,
-                            totalCount = habitsWithStatus.size
-                        )
+                        Box(modifier = Modifier.padding(horizontal = 24.dp)) {
+                            DashboardProgressCircle(
+                                doneCount = doneCount,
+                                totalCount = habitsWithStatus.size
+                            )
+                        }
                     }
 
                     item {
                     Spacer(modifier = Modifier.height(16.dp))
                     
                     // Motivation & Reflection Card
+                    Box(modifier = Modifier.padding(horizontal = 24.dp)) {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -192,28 +197,34 @@ fun DashboardScreen(
                             }
                         }
                     }
+                    }
                 }
 
                 item {
                     Spacer(modifier = Modifier.height(32.dp))
+                    Box(modifier = Modifier.padding(horizontal = 24.dp)) {
                         Text(
                             text = "Today's habits",
                             color = TextPrimary,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
                         )
+                    }
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
                     if (isLoading && habitsWithStatus.isEmpty()) {
                         items(3) {
-                            HabitCardSkeleton()
+                            Box(modifier = Modifier.padding(horizontal = 24.dp)) {
+                                HabitCardSkeleton()
+                            }
                         }
                     } else if (habitsWithStatus.isEmpty()) {
                         item {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .padding(horizontal = 24.dp)
                                     .padding(vertical = 32.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
@@ -236,23 +247,27 @@ fun DashboardScreen(
                         val visibleHabits = if (isExpanded) habitsWithStatus else habitsWithStatus.take(1)
                         
                         items(visibleHabits, key = { it.habit.id }) { item ->
-                            DashboardHabitCard(
-                                habit = item.habit,
-                                isCompleted = item.isCompletedToday,
-                                loggedAt = item.loggedAt,
-                                onToggle = { viewModel.toggleHabitCompletion(item.habit) },
-                                onRemove = { viewModel.removeHabitProgress(item.habit) }
-                            )
+                            Box(modifier = Modifier.padding(horizontal = 24.dp)) {
+                                DashboardHabitCard(
+                                    habit = item.habit,
+                                    isCompleted = item.isCompletedToday,
+                                    loggedAt = item.loggedAt,
+                                    onToggle = { viewModel.toggleHabitCompletion(item.habit) },
+                                    onRemove = { viewModel.removeHabitProgress(item.habit) }
+                                )
+                            }
                         }
 
                         if (!isExpanded && habitsWithStatus.size > 1) {
                             item {
-                                TextButton(
-                                    onClick = { isExpanded = true },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = ButtonDefaults.textButtonColors(contentColor = AccentPrimary)
-                                ) {
-                                    Text("Show more", fontWeight = FontWeight.Bold)
+                                Box(modifier = Modifier.padding(horizontal = 24.dp)) {
+                                    TextButton(
+                                        onClick = { isExpanded = true },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = ButtonDefaults.textButtonColors(contentColor = AccentPrimary)
+                                    ) {
+                                        Text("Show more", fontWeight = FontWeight.Bold)
+                                    }
                                 }
                             }
                         }

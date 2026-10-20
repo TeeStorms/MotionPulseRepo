@@ -24,6 +24,7 @@ fun GradientHeader(
     gradient: Brush = HeaderGradient3Stop,
     showProfileAvatar: Boolean = false,
     userName: String? = null,
+    topBarContent: (@Composable () -> Unit)? = null,
     content: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     CapFontScale(maxFontScale = 1.3f) {
@@ -36,9 +37,20 @@ fun GradientHeader(
                 .padding(horizontal = 24.dp, vertical = 20.dp),
             contentAlignment = Alignment.Center
         ) {
+            if (topBarContent != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.TopCenter)
+                ) {
+                    topBarContent()
+                }
+            }
+
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.align(Alignment.Center)
             ) {
                 if (showProfileAvatar && userName != null) {
                     UserAvatarInitials(
@@ -48,7 +60,7 @@ fun GradientHeader(
                     Spacer(modifier = Modifier.height(10.dp))
                 }
 
-                if (subtitle != null) {
+                if (subtitle != null && topBarContent == null) {
                     Text(
                         text = subtitle.uppercase(),
                         color = TextPrimary.copy(alpha = 0.9f),

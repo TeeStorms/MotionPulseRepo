@@ -25,14 +25,16 @@ fun MotionPulseHeader(
     showProfileIcon: Boolean = false,
     userName: String? = null,
     todayMood: MoodEntity? = null,
-    gradient: Brush = HeaderGradient3Stop
+    gradient: Brush = HeaderGradient3Stop,
+    topBarContent: (@Composable () -> Unit)? = null
 ) {
     GradientHeader(
         title = title,
         subtitle = subtitle,
         gradient = gradient,
         showProfileAvatar = showProfileIcon,
-        userName = userName ?: title
+        userName = userName ?: title,
+        topBarContent = topBarContent
     ) {
         if (todayMood != null) {
             Spacer(modifier = Modifier.height(16.dp))
