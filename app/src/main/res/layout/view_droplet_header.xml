@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/header_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/background_dark"
+    android:paddingStart="20dp"
+    android:paddingEnd="20dp"
+    android:paddingTop="24dp"
+    android:paddingBottom="16dp">
+
+    <!-- Top Row for Navigation / Action Slots -->
+    <LinearLayout
+        android:id="@+id/top_row_container"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:minHeight="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <FrameLayout
+            android:id="@+id/nav_slot"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="48dp"
+            android:minHeight="48dp" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <FrameLayout
+            android:id="@+id/actions_slot"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="48dp"
+            android:minHeight="48dp" />
+    </LinearLayout>
+
+    <!-- Main Content Barrier/Constraint Anchor -->
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/content_top_guideline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_begin="0dp" />
+
+    <!-- Droplet Image (Left) -->
+    <ImageView
+        android:id="@+id/droplet_image"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:contentDescription="@null"
+        android:scaleType="fitCenter"
+        android:src="@drawable/droplet"
+        app:layout_constraintDimensionRatio="821:1001"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/top_row_container"
+        app:layout_constraintWidth_default="percent"
+        app:layout_constraintWidth_max="200dp"
+        app:layout_constraintWidth_min="110dp"
+        app:layout_constraintWidth_percent="0.42" />
+
+    <!-- Feathered Overlay for Droplet Bottom -->
+    <View
+        android:id="@+id/droplet_feather_overlay"
+        android:layout_width="0dp"
+        android:layout_height="32dp"
+        android:background="@drawable/bg_feather_fade"
+        app:layout_constraintBottom_toBottomOf="@id/droplet_image"
+        app:layout_constraintEnd_toEndOf="@id/droplet_image"
+        app:layout_constraintStart_toStartOf="@id/droplet_image" />
+
+    <!-- Text Column (Right, Right-Aligned) -->
+    <LinearLayout
+        android:id="@+id/text_column"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:gravity="end"
+        android:orientation="vertical"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/droplet_image"
+        app:layout_constraintTop_toTopOf="@id/droplet_image">
+
+        <TextView
+            android:id="@+id/caption_text"
+            style="@style/TextAppearance.MotionPulse.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:letterSpacing="0.15"
+            android:textColor="@color/text_secondary"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/title_text"
+            style="@style/TextAppearance.MotionPulse.TitleLarge"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:accessibilityHeading="true"
+            android:gravity="end"
+            android:lineSpacingMultiplier="1.1"
+            android:textColor="@color/text_primary" />
+
+        <FrameLayout
+            android:id="@+id/trailing_slot"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

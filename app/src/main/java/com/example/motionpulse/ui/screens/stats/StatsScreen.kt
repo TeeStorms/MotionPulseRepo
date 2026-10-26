@@ -13,8 +13,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.motionpulse.ui.components.DropletHeader
+import com.example.motionpulse.ui.components.MoodPill
 import com.example.motionpulse.ui.components.MotionPulseBottomNav
-import com.example.motionpulse.ui.screens.dashboard.components.MotionPulseHeader
 import com.example.motionpulse.ui.screens.stats.components.*
 import com.example.motionpulse.ui.theme.*
 import com.example.motionpulse.ui.viewmodels.StatsViewModel
@@ -61,9 +62,16 @@ fun StatsScreen(
                 contentPadding = PaddingValues(bottom = 96.dp)
             ) {
                 item {
-                    MotionPulseHeader(
+                    DropletHeader(
                         title = "Your Rhythm",
-                        todayMood = todayMood
+                        caption = "MOTION.PULSE",
+                        trailing = {
+                            if (todayMood != null) {
+                                val moodColor = getMoodColor(todayMood!!.moodLevel)
+                                val moodName = todayMood!!.moodLevel.name.lowercase().replaceFirstChar { it.uppercase() }
+                                MoodPill(moodLevelName = moodName, dotColor = moodColor)
+                            }
+                        }
                     )
                     Spacer(modifier = Modifier.height(32.dp))
                 }
@@ -169,5 +177,15 @@ fun StatsScreen(
                 }
             }
         }
+    }
+}
+
+private fun getMoodColor(level: com.example.motionpulse.data.local.entity.MoodLevel): Color {
+    return when (level) {
+        com.example.motionpulse.data.local.entity.MoodLevel.ENERGIZED -> Color(0xFFE040FB)
+        com.example.motionpulse.data.local.entity.MoodLevel.GOOD -> Color(0xFFFF2A85)
+        com.example.motionpulse.data.local.entity.MoodLevel.STEADY -> Color(0xFF4FC3F7)
+        com.example.motionpulse.data.local.entity.MoodLevel.LOW -> Color(0xFFFFB74D)
+        com.example.motionpulse.data.local.entity.MoodLevel.DRAINED -> Color(0xFF607D8B)
     }
 }

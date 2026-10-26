@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_dark"
+    android:padding="16dp"
+    tools:ignore="HardcodedText">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Droplet Header Preview -->
+        <com.example.motionpulse.ui.views.DropletHeaderView
+            android:id="@+id/preview_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <!-- User Avatar & Mood Pill Row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <com.example.motionpulse.ui.views.UserAvatarView
+                android:id="@+id/preview_avatar"
+                android:layout_width="56dp"
+                android:layout_height="56dp" />
+
+            <Space
+                android:layout_width="16dp"
+                android:layout_height="1dp" />
+
+            <com.example.motionpulse.ui.views.MoodPillView
+                android:id="@+id/preview_mood_pill"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <!-- Button Styles Preview -->
+        <Button
+            style="@style/Widget.MotionPulse.Button.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="Primary Button" />
+
+        <Button
+            style="@style/Widget.MotionPulse.Button.Secondary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Secondary Button" />
+
+        <Button
+            style="@style/Widget.MotionPulse.Button.Destructive"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Destructive Button" />
+
+        <!-- StateLayout Preview -->
+        <com.example.motionpulse.ui.views.StateLayout
+            android:id="@+id/preview_state_layout"
+            android:layout_width="match_parent"
+            android:layout_height="150dp"
+            android:layout_marginTop="20dp"
+            android:background="@drawable/bg_card" />
+
+        <!-- Bottom Navigation Preview -->
+        <com.example.motionpulse.ui.views.MotionPulseBottomNav
+            android:id="@+id/preview_bottom_nav"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp" />
+
+    </LinearLayout>
+</ScrollView>

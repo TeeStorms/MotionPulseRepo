@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/bottom_nav_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="64dp"
+    android:background="@color/bottom_nav_background"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="4dp"
+    android:paddingEnd="4dp"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp">
+
+    <!-- 6 Equal-Weight Tab Slots -->
+    <LinearLayout android:id="@+id/tab_home" style="@style/MotionPulseTabSlot">
+        <FrameLayout android:id="@+id/icon_container_home" style="@style/MotionPulseTabIconContainer">
+            <ImageView android:id="@+id/icon_home" style="@style/MotionPulseTabIcon" android:src="@drawable/ic_home" />
+        </FrameLayout>
+        <TextView android:id="@+id/label_home" style="@style/MotionPulseTabLabel" android:text="Home" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/tab_mood" style="@style/MotionPulseTabSlot">
+        <FrameLayout android:id="@+id/icon_container_mood" style="@style/MotionPulseTabIconContainer">
+            <ImageView android:id="@+id/icon_mood" style="@style/MotionPulseTabIcon" android:src="@drawable/ic_mood" />
+        </FrameLayout>
+        <TextView android:id="@+id/label_mood" style="@style/MotionPulseTabLabel" android:text="Mood" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/tab_habits" style="@style/MotionPulseTabSlot">
+        <FrameLayout android:id="@+id/icon_container_habits" style="@style/MotionPulseTabIconContainer">
+            <ImageView android:id="@+id/icon_habits" style="@style/MotionPulseTabIcon" android:src="@drawable/ic_habits" />
+        </FrameLayout>
+        <TextView android:id="@+id/label_habits" style="@style/MotionPulseTabLabel" android:text="Habits" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/tab_community" style="@style/MotionPulseTabSlot">
+        <FrameLayout android:id="@+id/icon_container_community" style="@style/MotionPulseTabIconContainer">
+            <ImageView android:id="@+id/icon_community" style="@style/MotionPulseTabIcon" android:src="@drawable/ic_community" />
+        </FrameLayout>
+        <TextView android:id="@+id/label_community" style="@style/MotionPulseTabLabel" android:text="Community" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/tab_stats" style="@style/MotionPulseTabSlot">
+        <FrameLayout android:id="@+id/icon_container_stats" style="@style/MotionPulseTabIconContainer">
+            <ImageView android:id="@+id/icon_stats" style="@style/MotionPulseTabIcon" android:src="@drawable/ic_stats" />
+        </FrameLayout>
+        <TextView android:id="@+id/label_stats" style="@style/MotionPulseTabLabel" android:text="Stats" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/tab_profile" style="@style/MotionPulseTabSlot">
+        <FrameLayout android:id="@+id/icon_container_profile" style="@style/MotionPulseTabIconContainer">
+            <ImageView android:id="@+id/icon_profile" style="@style/MotionPulseTabIcon" android:src="@drawable/ic_profile" />
+        </FrameLayout>
+        <TextView android:id="@+id/label_profile" style="@style/MotionPulseTabLabel" android:text="Profile" />
+    </LinearLayout>
+
+</LinearLayout>
