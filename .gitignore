@@ -16,3 +16,16 @@ local.properties
 node_modules/
 firebase-debug.log
 .firebase/
+
+# IDE, AI tooling and scratch files
+.idea/
+.agents/
+.claude/
+agent/
+.artifacts/
+artifacts/
+skills-lock.json
+*.log
+# Local config copies (the .b64 is only for the GitHub secret)
+app/google-services.json
+app/google-services.b64
