@@ -1,24 +1,33 @@
 package com.example.motionpulse.ui.fragments
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Toast
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.navigation.fragment.findNavController
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.room.Room
-import com.example.motionpulse.R
 import com.example.motionpulse.data.local.AppDatabase
+import com.example.motionpulse.data.local.entity.MoodLevel
 import com.example.motionpulse.data.repository.PreferenceRepository
+import com.example.motionpulse.databinding.FragmentMoodBinding
 import com.example.motionpulse.domain.auth.AuthState
 import com.example.motionpulse.domain.auth.AuthViewModel
-import com.example.motionpulse.ui.screens.mood.MoodScreen
 import com.example.motionpulse.ui.viewmodels.MoodViewModel
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
-class MoodFragment : BaseComposeHostFragment() {
+class MoodFragment : Fragment() {
+
+    private var _binding: FragmentMoodBinding? = null
+    private val binding get() = _binding!!
 
     private val preferenceRepository by lazy { PreferenceRepository(requireContext()) }
     private val authViewModel: AuthViewModel by activityViewModels {
-        object : androidx.lifecycle.ViewModelProvider.Factory {
+        object : ViewModelProvider.Factory {
             override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
                 return AuthViewModel(preferenceRepository = preferenceRepository) as T
             }
@@ -32,33 +41,43 @@ class MoodFragment : BaseComposeHostFragment() {
         ).fallbackToDestructiveMigration().build()
     }
 
-    @Composable
-    override fun Content() {
-        val authState by authViewModel.authState.collectAsState()
-        val uid = (authState as? AuthState.Authenticated)?.uid ?: ""
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        _binding = FragmentMoodBinding.inflate(inflater, container, false)
+        return binding.root
+    }
 
-        if (uid.isNotEmpty()) {
-            val moodViewModel: MoodViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
-                key = uid,
-                factory = MoodViewModel.Factory(db, uid)
-            )
-            MoodScreen(
-                viewModel = moodViewModel,
-                onNavigateToNav = { route -> navigateToRoute(route) },
-                currentRoute = "mood"
-            )
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        binding.dropletHeader.setTitle("How's your rhythm\ntoday?")
+        binding.dropletHeader.setCaption("MOTION.PULSE")
+        binding.selectedMoodPill.setMood("Energized", "#EE44CB")
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            authViewModel.authState.collectLatest { state ->
+                val uid = (state as? AuthState.Authenticated)?.uid ?: ""
+                if (uid.isNotEmpty()) {
+                    val moodViewModel = ViewModelProvider(
+                        this@MoodFragment,
+                        MoodViewModel.Factory(db, uid)
+                    )[MoodViewModel::class.java]
+
+                    binding.btnSaveMood.setOnClickListener {
+                        val note = binding.etNote.text?.toString() ?: ""
+                        moodViewModel.logMood(MoodLevel.ENERGIZED, emptyList(), note)
+                        Toast.makeText(requireContext(), "Saved rhythm!", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
         }
     }
 
-    private fun navigateToRoute(route: String) {
-        val destinationId = when (route) {
-            "dashboard" -> R.id.dashboard
-            "habits" -> R.id.habits
-            "community" -> R.id.community
-            "stats" -> R.id.stats
-            "profile" -> R.id.profile
-            else -> null
-        }
-        destinationId?.let { findNavController().navigate(it) }
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

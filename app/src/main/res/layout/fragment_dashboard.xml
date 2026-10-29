@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.swiperefreshlayout.widget.SwipeRefreshLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/swipe_refresh"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_dark">
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingBottom="96dp">
+
+            <com.example.motionpulse.ui.views.DropletHeaderView
+                android:id="@+id/droplet_header"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <!-- Sync Failure Warning -->
+            <TextView
+                android:id="@+id/tv_sync_warning"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#33FFFF00"
+                android:gravity="center"
+                android:padding="8dp"
+                android:text="Local Mode: Cloud sync is disabled. Fix rules to backup data."
+                android:textColor="#FFFFFF"
+                android:textSize="12sp"
+                android:visibility="gone" />
+
+            <Space
+                android:layout_width="1dp"
+                android:layout_height="16dp" />
+
+            <!-- Motivation Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="24dp"
+                android:layout_marginEnd="24dp"
+                app:cardBackgroundColor="@color/card_background"
+                app:cardCornerRadius="24dp"
+                app:strokeColor="@color/card_border_alt"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="24dp">
+
+                    <TextView
+                        style="@style/TextAppearance.MotionPulse.Caption"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="💡 MOTIVATION OF THE DAY" />
+
+                    <TextView
+                        android:id="@+id/tv_daily_quote"
+                        style="@style/TextAppearance.MotionPulse.TitleMedium"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="Small steps lead to big results." />
+
+                    <TextView
+                        android:id="@+id/tv_reflection_note"
+                        style="@style/TextAppearance.MotionPulse.Body"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:fontFamily="sans-serif-light"
+                        android:textStyle="italic"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <Space
+                android:layout_width="1dp"
+                android:layout_height="24dp" />
+
+            <!-- Today's Habits Header -->
+            <TextView
+                style="@style/TextAppearance.MotionPulse.TitleMedium"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp"
+                android:text="Today's habits" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_habits"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:clipToPadding="false"
+                android:paddingStart="24dp"
+                android:paddingEnd="24dp" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>

@@ -17,7 +17,7 @@ class DropletHeaderView @JvmOverloads constructor(
     private val binding: ViewDropletHeaderBinding
 
     init {
-        binding = ViewDropletHeaderBinding.inflate(LayoutInflater.from(context), this)
+        binding = ViewDropletHeaderBinding.inflate(LayoutInflater.from(context), this, true)
         ChromeFontScaleHelper.applyMaxFontScale(binding.captionText)
     }
 

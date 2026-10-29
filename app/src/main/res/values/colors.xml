@@ -1,5 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <!-- Global Tokens -->
+    <color name="background_dark">#05020A</color>
+    <color name="card_background">#1C0620</color>
+    <color name="card_border">#E01E79</color>
+    <color name="card_border_alt">#FF2A85</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#D1C7D7</color>
+    <color name="accent_primary">#FF2A85</color>
+    <color name="accent_blue">#4FC3F7</color>
+    <color name="bottom_nav_background">#140217</color>
+    <color name="bottom_nav_active">#FF2A85</color>
+    <color name="bottom_nav_inactive">#B182B8</color>
+    <color name="text_link_color">#FF3D94</color>
+
+    <!-- Screen-Specific Accents -->
+    <color name="profile_avatar_badge">#51B0FF</color>
+    <color name="profile_achievements_bg">#18041C</color>
+    <color name="profile_logout_bg">#680D12</color>
+    <color name="profile_logout_outline">#A81A22</color>
+
+    <color name="stats_habit_color_1">#FFEE00</color>
+    <color name="stats_habit_color_2">#FF2E2E</color>
+    <color name="stats_habit_color_3">#5E82FF</color>
+
+    <color name="dashboard_active_dot">#FF006E</color>
+    <color name="dashboard_completed_dot">#8B0032</color>
+
+    <color name="habits_category_focus_active">#A3A000</color>
+    <color name="habits_category_fitness_dot">#FF2E2E</color>
+    <color name="habits_category_routine_dot">#5E82FF</color>
+    <color name="add_habit_input_bg">#0A010D</color>
 </resources>

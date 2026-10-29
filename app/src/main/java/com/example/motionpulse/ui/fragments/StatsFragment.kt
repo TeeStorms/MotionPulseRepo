@@ -1,64 +1,48 @@
 package com.example.motionpulse.ui.fragments
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.navigation.fragment.findNavController
-import androidx.room.Room
-import com.example.motionpulse.R
-import com.example.motionpulse.data.local.AppDatabase
+import androidx.lifecycle.ViewModelProvider
 import com.example.motionpulse.data.repository.PreferenceRepository
-import com.example.motionpulse.domain.auth.AuthState
+import com.example.motionpulse.databinding.FragmentStatsBinding
 import com.example.motionpulse.domain.auth.AuthViewModel
-import com.example.motionpulse.ui.screens.stats.StatsScreen
-import com.example.motionpulse.ui.viewmodels.StatsViewModel
 
-class StatsFragment : BaseComposeHostFragment() {
+class StatsFragment : Fragment() {
+
+    private var _binding: FragmentStatsBinding? = null
+    private val binding get() = _binding!!
 
     private val preferenceRepository by lazy { PreferenceRepository(requireContext()) }
     private val authViewModel: AuthViewModel by activityViewModels {
-        object : androidx.lifecycle.ViewModelProvider.Factory {
+        object : ViewModelProvider.Factory {
             override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
                 return AuthViewModel(preferenceRepository = preferenceRepository) as T
             }
         }
     }
 
-    private val db by lazy {
-        Room.databaseBuilder(
-            requireContext().applicationContext,
-            AppDatabase::class.java, "motion_pulse_db"
-        ).fallbackToDestructiveMigration().build()
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        _binding = FragmentStatsBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
-    @Composable
-    override fun Content() {
-        val authState by authViewModel.authState.collectAsState()
-        val uid = (authState as? AuthState.Authenticated)?.uid ?: ""
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
 
-        if (uid.isNotEmpty()) {
-            val statsViewModel: StatsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
-                key = uid,
-                factory = StatsViewModel.Factory(db, uid)
-            )
-            StatsScreen(
-                viewModel = statsViewModel,
-                onNavigateToNav = { route -> navigateToRoute(route) },
-                currentRoute = "stats"
-            )
-        }
+        binding.dropletHeader.setTitle("Your Rhythm")
+        binding.dropletHeader.setCaption("MOTION.PULSE")
     }
 
-    private fun navigateToRoute(route: String) {
-        val destinationId = when (route) {
-            "dashboard" -> R.id.dashboard
-            "mood" -> R.id.mood
-            "habits" -> R.id.habits
-            "community" -> R.id.community
-            "profile" -> R.id.profile
-            else -> null
-        }
-        destinationId?.let { findNavController().navigate(it) }
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 }

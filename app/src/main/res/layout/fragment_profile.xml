@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_dark"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingBottom="96dp">
+
+        <com.example.motionpulse.ui.views.DropletHeaderView
+            android:id="@+id/droplet_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <Button
+                android:id="@+id/btn_badges"
+                style="@style/Widget.MotionPulse.Button.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Badges Gallery" />
+
+            <Space
+                android:layout_width="1dp"
+                android:layout_height="16dp" />
+
+            <Button
+                android:id="@+id/btn_logout"
+                style="@style/Widget.MotionPulse.Button.Destructive"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Sign Out" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.core.widget.NestedScrollView>

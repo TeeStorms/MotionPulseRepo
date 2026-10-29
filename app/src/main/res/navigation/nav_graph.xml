@@ -3,26 +3,89 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/FirstFragment">
+    app:startDestination="@id/landing">
 
     <fragment
-        android:id="@+id/FirstFragment"
-        android:name="com.example.motionpulse.FirstFragment"
-        android:label="@string/first_fragment_label"
-        tools:layout="@layout/fragment_first">
+        android:id="@+id/landing"
+        android:name="com.example.motionpulse.ui.fragments.LandingFragment"
+        android:label="Landing"
+        tools:layout="@layout/fragment_host_compose" />
 
-        <action
-            android:id="@+id/action_FirstFragment_to_SecondFragment"
-            app:destination="@id/SecondFragment" />
-    </fragment>
     <fragment
-        android:id="@+id/SecondFragment"
-        android:name="com.example.motionpulse.SecondFragment"
-        android:label="@string/second_fragment_label"
-        tools:layout="@layout/fragment_second">
+        android:id="@+id/onboarding"
+        android:name="com.example.motionpulse.ui.fragments.OnboardingFragment"
+        android:label="Onboarding"
+        tools:layout="@layout/fragment_host_compose" />
 
-        <action
-            android:id="@+id/action_SecondFragment_to_FirstFragment"
-            app:destination="@id/FirstFragment" />
+    <fragment
+        android:id="@+id/login"
+        android:name="com.example.motionpulse.ui.fragments.LoginFragment"
+        android:label="Login"
+        tools:layout="@layout/fragment_host_compose" />
+
+    <fragment
+        android:id="@+id/register"
+        android:name="com.example.motionpulse.ui.fragments.RegisterFragment"
+        android:label="Register"
+        tools:layout="@layout/fragment_host_compose" />
+
+    <fragment
+        android:id="@+id/email_verification"
+        android:name="com.example.motionpulse.ui.fragments.EmailVerificationFragment"
+        android:label="EmailVerification"
+        tools:layout="@layout/fragment_host_compose" />
+
+    <fragment
+        android:id="@+id/dashboard"
+        android:name="com.example.motionpulse.ui.fragments.DashboardFragment"
+        android:label="Dashboard"
+        tools:layout="@layout/fragment_host_compose" />
+
+    <fragment
+        android:id="@+id/mood"
+        android:name="com.example.motionpulse.ui.fragments.MoodFragment"
+        android:label="Mood"
+        tools:layout="@layout/fragment_host_compose" />
+
+    <fragment
+        android:id="@+id/habits"
+        android:name="com.example.motionpulse.ui.fragments.HabitsFragment"
+        android:label="Habits"
+        tools:layout="@layout/fragment_host_compose" />
+
+    <fragment
+        android:id="@+id/habit_detail"
+        android:name="com.example.motionpulse.ui.fragments.HabitDetailFragment"
+        android:label="HabitDetail"
+        tools:layout="@layout/fragment_host_compose">
+        <argument
+            android:name="habitId"
+            android:defaultValue=""
+            app:argType="string" />
     </fragment>
+
+    <fragment
+        android:id="@+id/community"
+        android:name="com.example.motionpulse.ui.fragments.CommunityFragment"
+        android:label="Community"
+        tools:layout="@layout/fragment_host_compose" />
+
+    <fragment
+        android:id="@+id/stats"
+        android:name="com.example.motionpulse.ui.fragments.StatsFragment"
+        android:label="Stats"
+        tools:layout="@layout/fragment_host_compose" />
+
+    <fragment
+        android:id="@+id/profile"
+        android:name="com.example.motionpulse.ui.fragments.ProfileFragment"
+        android:label="Profile"
+        tools:layout="@layout/fragment_host_compose" />
+
+    <fragment
+        android:id="@+id/badges_gallery"
+        android:name="com.example.motionpulse.ui.fragments.BadgesGalleryFragment"
+        android:label="BadgesGallery"
+        tools:layout="@layout/fragment_host_compose" />
+
 </navigation>

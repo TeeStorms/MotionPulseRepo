@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_dark"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="MOTION.PULSE"
+        style="@style/TextAppearance.MotionPulse.TitleLarge"
+        android:textColor="@color/accent_primary"
+        android:gravity="center" />
+
+    <Space
+        android:layout_width="1dp"
+        android:layout_height="32dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Build your rhythm. Track habits, moods, and grow together."
+        style="@style/TextAppearance.MotionPulse.Body"
+        android:gravity="center"
+        android:textColor="@color/text_secondary" />
+
+    <Space
+        android:layout_width="1dp"
+        android:layout_height="48dp" />
+
+    <Button
+        android:id="@+id/btn_get_started"
+        style="@style/Widget.MotionPulse.Button.Primary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Get Started" />
+
+</LinearLayout>
