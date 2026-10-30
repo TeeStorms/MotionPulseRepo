@@ -22,7 +22,34 @@ firebase-debug.log
 .agents/
 .claude/
 agent/
-.artifacts/
+COMMON RULES (paste above every prompt)
+CONTEXT: Motion.Pulse is an XML Views app (single Activity, Fragments, Navigation Component, ViewBinding,
+Hilt). No Compose exists in the project any more. A migration left the screens as empty shells: the header
+image shows, but the content, features and behavior of the old screens are missing.
+
+SOURCE OF TRUTH: the last Compose version is in git. Use the tag pre-compose-removal (if that tag does not
+contain files under app/src/main/java/com/example/motionpulse/ui/screens, use commit 7f8eed9). Find files with
+`git ls-tree -r --name-only pre-compose-removal app/src/main/java` and read them with
+`git show pre-compose-removal:<path>`. The old code wins over this prompt's checklist if they differ. Tell me
+about every difference.
+
+RULES:
+1. Never mark a feature done unless it is built, wired to real data and you ran it. No placeholders, no TODO,
+   no "coming soon", no hard-coded sample data.
+2. If a ViewModel or repository function the screen needs is missing or was changed, restore it from the old
+   code. Do not change Firestore rules, indexes or tests unless this prompt says so.
+3. XML + ViewBinding + Fragment. Set the binding to null in onDestroyView. Collect flows with
+   viewLifecycleOwner.lifecycleScope + repeatOnLifecycle(STARTED). Navigate through the nav graph.
+4. Look: reuse the tokens in colors.xml and the shared views (DropletHeaderView, UserAvatarView,
+   MoodPillView, StateLayout, the bottom nav). Cards: solid #1C0620, 1dp stroke #E01E79, 20dp corners.
+5. Adaptive: dp and sp, ConstraintLayout/wrap_content, no fixed heights around text, scrolling for overflow,
+   48dp touch targets, texts in strings.xml, contentDescription on icon-only views. Check sw320dp and font
+   scales 1.3 and 2.0. Headers scroll away with the content and the bottom nav stays.
+6. Never write an empty catch block. Log every caught exception with its real message.
+7. Work in this order and keep going until it is finished: (a) read the old code and the screen's section in
+   MIGRATION_PARITY.md, (b) build the layouts, (c) build adapters and custom views, (d) wire to the
+   ViewModel, (e) run the app and exercise every feature, (f) update the statuses in MIGRATION_PARITY.md.
+8. Do not commit. Do not start another screen. Finish with a parity table: feature | built | tested | note..artifacts/
 artifacts/
 skills-lock.json
 *.log

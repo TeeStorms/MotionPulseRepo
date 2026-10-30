@@ -1,81 +1,304 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_dark"
-    android:fillViewport="true">
+    android:background="@color/background_dark">
 
-    <LinearLayout
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_horizontal"
-        android:orientation="vertical"
-        android:padding="24dp">
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
-        <com.example.motionpulse.ui.views.DropletHeaderView
-            android:id="@+id/droplet_header"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-        <Space
-            android:layout_width="1dp"
-            android:layout_height="32dp" />
-
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.MotionPulse.TextInputLayout"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Email">
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:padding="24dp">
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/et_email"
+            <!-- Droplet Header -->
+            <com.example.motionpulse.ui.views.DropletHeaderView
+                android:id="@+id/droplet_header"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <!-- Offline Banner -->
+            <TextView
+                android:id="@+id/tv_offline_banner"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="textEmailAddress"
-                android:textColor="@color/text_primary" />
-        </com.google.android.material.textfield.TextInputLayout>
+                android:layout_marginTop="8dp"
+                android:background="#99CC0000"
+                android:gravity="center"
+                android:padding="8dp"
+                android:text="You're offline. Connect to sign in"
+                android:textColor="@color/text_primary"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
 
-        <Space
-            android:layout_width="1dp"
-            android:layout_height="16dp" />
+            <Space
+                android:layout_width="1dp"
+                android:layout_height="16dp" />
 
-        <com.google.android.material.textfield.TextInputLayout
-            style="@style/Widget.MotionPulse.TextInputLayout"
-            app:passwordToggleEnabled="true"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Password">
+            <!-- Logo -->
+            <ImageView
+                android:id="@+id/iv_logo"
+                android:layout_width="120dp"
+                android:layout_height="80dp"
+                android:contentDescription="Motion Pulse Logo"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_logo" />
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/et_password"
+            <Space
+                android:layout_width="1dp"
+                android:layout_height="12dp" />
+
+            <!-- Subtitle -->
+            <TextView
+                android:id="@+id/tv_subtitle"
+                style="@style/TextAppearance.MotionPulse.TitleMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Build your rhythm."
+                android:textColor="@color/text_primary"
+                android:textSize="20sp" />
+
+            <Space
+                android:layout_width="1dp"
+                android:layout_height="24dp" />
+
+            <!-- Email Field -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_email"
+                style="@style/Widget.MotionPulse.TextInputLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:inputType="textPassword"
-                android:textColor="@color/text_primary" />
-        </com.google.android.material.textfield.TextInputLayout>
+                android:hint="Email Address"
+                app:errorEnabled="true">
 
-        <Space
-            android:layout_width="1dp"
-            android:layout_height="24dp" />
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_email"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:imeOptions="actionNext"
+                    android:inputType="textEmailAddress"
+                    android:textColor="@color/text_primary" />
+            </com.google.android.material.textfield.TextInputLayout>
 
-        <Button
-            android:id="@+id/btn_login"
-            style="@style/Widget.MotionPulse.Button.Primary"
-            android:layout_width="match_parent"
+            <Space
+                android:layout_width="1dp"
+                android:layout_height="8dp" />
+
+            <!-- Password Field -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/til_password"
+                style="@style/Widget.MotionPulse.TextInputLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Password"
+                app:errorEnabled="true"
+                app:passwordToggleEnabled="true"
+                app:passwordToggleTint="@color/text_secondary">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_password"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:imeOptions="actionDone"
+                    android:inputType="textPassword"
+                    android:textColor="@color/text_primary" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Verification Required Panel -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_verification_required"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone"
+                app:cardBackgroundColor="@color/card_background"
+                app:cardCornerRadius="16dp"
+                app:strokeColor="@color/card_border"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        style="@style/TextAppearance.MotionPulse.TitleMedium"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Verification Required"
+                        android:textColor="@color/accent_primary"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        style="@style/TextAppearance.MotionPulse.Body"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="Your password is correct, but your email needs verification before signing in."
+                        android:textSize="13sp" />
+
+                    <Button
+                        android:id="@+id/btn_resend_verification"
+                        style="@style/Widget.MotionPulse.Button.Secondary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:minHeight="44dp"
+                        android:text="Resend Verification Email"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <Space
+                android:layout_width="1dp"
+                android:layout_height="16dp" />
+
+            <!-- Log In Button -->
+            <Button
+                android:id="@+id/btn_login"
+                style="@style/Widget.MotionPulse.Button.Primary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Log In" />
+
+            <Space
+                android:layout_width="1dp"
+                android:layout_height="16dp" />
+
+            <!-- Forgot Password -->
+            <TextView
+                android:id="@+id/tv_forgot_password"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="8dp"
+                android:text="Forgot Password?"
+                android:textColor="@color/text_link_color"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <Space
+                android:layout_width="1dp"
+                android:layout_height="16dp" />
+
+            <!-- Divider with "or" -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1"
+                    android:background="@color/card_border" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:text="or"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1"
+                    android:background="@color/card_border" />
+            </LinearLayout>
+
+            <Space
+                android:layout_width="1dp"
+                android:layout_height="16dp" />
+
+            <!-- Continue with Google Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_google"
+                style="@style/Widget.MotionPulse.Button.Secondary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Continue with Google"
+                app:icon="@drawable/ic_google"
+                app:iconGravity="textStart"
+                app:iconPadding="12dp"
+                app:iconSize="20dp"
+                app:iconTint="@null" />
+
+            <Space
+                android:layout_width="1dp"
+                android:layout_height="24dp" />
+
+            <!-- Footer Link to Register -->
+            <TextView
+                android:id="@+id/tv_footer_register"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="8dp"
+                android:textColor="@color/text_primary"
+                android:textSize="15sp" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Progress Overlay -->
+    <FrameLayout
+        android:id="@+id/overlay_signing_in"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#CC05020A"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Sign In" />
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="vertical">
 
-        <Space
-            android:layout_width="1dp"
-            android:layout_height="16dp" />
+            <ProgressBar
+                android:id="@+id/overlay_progress_bar"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:indeterminateTint="@color/accent_primary" />
 
-        <Button
-            android:id="@+id/btn_register_nav"
-            style="@style/Widget.MotionPulse.Button.Secondary"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Create Account" />
+            <ImageView
+                android:id="@+id/overlay_success_icon"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:contentDescription="Success"
+                android:src="@drawable/ic_check"
+                android:visibility="gone"
+                app:tint="@color/accent_primary" />
 
-    </LinearLayout>
-</ScrollView>
+            <Space
+                android:layout_width="1dp"
+                android:layout_height="16dp" />
+
+            <TextView
+                android:id="@+id/overlay_status_text"
+                style="@style/TextAppearance.MotionPulse.TitleMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Signing you in..."
+                android:textSize="18sp" />
+        </LinearLayout>
+    </FrameLayout>
+
+</FrameLayout>

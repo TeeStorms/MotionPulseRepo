@@ -47,6 +47,7 @@ dependencies {
     implementation(libs.androidx.viewpager2)
     implementation(libs.androidx.swiperefreshlayout)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation("androidx.core:core-splashscreen:1.0.1")
 
     // Media3 ExoPlayer
     implementation(libs.androidx.media3.exoplayer)
