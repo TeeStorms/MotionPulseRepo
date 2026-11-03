@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_dialog"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        style="@style/TextAppearance.MotionPulse.TitleLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Challenge a Friend"
+        android:textSize="22sp" />
+
+    <Space
+        android:layout_width="1dp"
+        android:layout_height="16dp" />
+
+    <TextView
+        style="@style/TextAppearance.MotionPulse.Caption"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="CHOOSE FRIEND" />
+
+    <Spinner
+        android:id="@+id/spinner_friend"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/bg_input" />
+
+    <Space
+        android:layout_width="1dp"
+        android:layout_height="16dp" />
+
+    <TextView
+        style="@style/TextAppearance.MotionPulse.Caption"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="CATEGORY" />
+
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/cg_challenge_categories"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        app:singleSelection="true">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_chal_mind"
+            style="@style/Widget.MotionPulse.Chip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="Mind &amp; Focus" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_chal_fitness"
+            style="@style/Widget.MotionPulse.Chip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Fitness &amp; Health" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip_chal_routine"
+            style="@style/Widget.MotionPulse.Chip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Daily Routine" />
+    </com.google.android.material.chip.ChipGroup>
+
+    <Space
+        android:layout_width="1dp"
+        android:layout_height="12dp" />
+
+    <TextView
+        android:id="@+id/tv_challenge_info"
+        style="@style/TextAppearance.MotionPulse.Body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Whoever logs the most habits in 7 days wins. Starts today, ends in 7 days."
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp" />
+
+    <TextView
+        android:id="@+id/tv_challenge_warning"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="⚠️ Warning: You have no active habits in this category."
+        android:textColor="#FFBB00"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
+    <Space
+        android:layout_width="1dp"
+        android:layout_height="24dp" />
+
+    <Button
+        android:id="@+id/btn_start_challenge"
+        style="@style/Widget.MotionPulse.Button.Primary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Start Challenge" />
+
+</LinearLayout>
