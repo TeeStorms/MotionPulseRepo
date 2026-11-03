@@ -1,47 +1,371 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.swiperefreshlayout.widget.SwipeRefreshLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/swipe_refresh"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background_dark"
-    android:fillViewport="true">
+    android:background="@color/background_dark">
 
-    <LinearLayout
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingBottom="96dp">
-
-        <com.example.motionpulse.ui.views.DropletHeaderView
-            android:id="@+id/droplet_header"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="24dp">
+            android:paddingBottom="96dp">
 
-            <TextView
-                style="@style/TextAppearance.MotionPulse.TitleMedium"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Weekly Summary" />
+            <!-- Droplet Header -->
+            <com.example.motionpulse.ui.views.DropletHeaderView
+                android:id="@+id/droplet_header"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
 
-            <Space
-                android:layout_width="1dp"
-                android:layout_height="16dp" />
-
-            <TextView
-                style="@style/TextAppearance.MotionPulse.Body"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_card"
-                android:padding="20dp"
-                android:text="Rhythm stats and correlation insights will appear here."
-                android:textColor="@color/text_secondary" />
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <!-- 2x2 Stat Boxes Grid (Equal Row Heights) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- Row 1 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="110dp"
+                        android:baselineAligned="false"
+                        android:orientation="horizontal">
+
+                        <!-- Box 1: Done Today -->
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            app:cardBackgroundColor="@color/card_background"
+                            app:cardCornerRadius="16dp"
+                            app:strokeColor="@color/card_border"
+                            app:strokeWidth="1dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:gravity="center_vertical"
+                                android:orientation="vertical"
+                                android:padding="16dp">
+
+                                <TextView
+                                    android:id="@+id/tv_stat_done_today"
+                                    style="@style/TextAppearance.MotionPulse.TitleLarge"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="0/0"
+                                    android:textColor="@color/accent_primary"
+                                    android:textSize="28sp"
+                                    android:textStyle="bold"
+                                    app:autoSizeTextType="uniform" />
+
+                                <TextView
+                                    style="@style/TextAppearance.MotionPulse.Body"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
+                                    android:letterSpacing="0.0"
+                                    android:maxLines="2"
+                                    android:text="Done Today"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="14sp" />
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <Space
+                            android:layout_width="10dp"
+                            android:layout_height="1dp" />
+
+                        <!-- Box 2: Current Streak -->
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            app:cardBackgroundColor="@color/card_background"
+                            app:cardCornerRadius="16dp"
+                            app:strokeColor="@color/card_border"
+                            app:strokeWidth="1dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:gravity="center_vertical"
+                                android:orientation="vertical"
+                                android:padding="16dp">
+
+                                <TextView
+                                    android:id="@+id/tv_stat_current_streak"
+                                    style="@style/TextAppearance.MotionPulse.TitleLarge"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="0d"
+                                    android:textColor="@color/accent_primary"
+                                    android:textSize="28sp"
+                                    android:textStyle="bold"
+                                    app:autoSizeTextType="uniform" />
+
+                                <TextView
+                                    style="@style/TextAppearance.MotionPulse.Body"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
+                                    android:letterSpacing="0.0"
+                                    android:maxLines="2"
+                                    android:text="Current Streak"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="14sp" />
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+                    </LinearLayout>
+
+                    <Space
+                        android:layout_width="1dp"
+                        android:layout_height="10dp" />
+
+                    <!-- Row 2 -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="125dp"
+                        android:baselineAligned="false"
+                        android:orientation="horizontal">
+
+                        <!-- Box 3: Total Completed -->
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            app:cardBackgroundColor="@color/card_background"
+                            app:cardCornerRadius="16dp"
+                            app:strokeColor="@color/card_border"
+                            app:strokeWidth="1dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:gravity="center_vertical"
+                                android:orientation="vertical"
+                                android:padding="16dp">
+
+                                <TextView
+                                    android:id="@+id/tv_stat_total_completed"
+                                    style="@style/TextAppearance.MotionPulse.TitleLarge"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="0"
+                                    android:textColor="@color/accent_primary"
+                                    android:textSize="28sp"
+                                    android:textStyle="bold"
+                                    app:autoSizeTextType="uniform" />
+
+                                <TextView
+                                    style="@style/TextAppearance.MotionPulse.Body"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="4dp"
+                                    android:letterSpacing="0.0"
+                                    android:maxLines="2"
+                                    android:text="Total Completed"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="14sp" />
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+
+                        <Space
+                            android:layout_width="10dp"
+                            android:layout_height="1dp" />
+
+                        <!-- Box 4: This Week -->
+                        <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/card_weekly_summary"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            app:cardBackgroundColor="@color/card_background"
+                            app:cardCornerRadius="16dp"
+                            app:strokeColor="@color/card_border"
+                            app:strokeWidth="1dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:gravity="center_vertical"
+                                android:orientation="vertical"
+                                android:padding="16dp">
+
+                                <TextView
+                                    android:id="@+id/tv_stat_weekly_percent"
+                                    style="@style/TextAppearance.MotionPulse.TitleLarge"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="0%"
+                                    android:textColor="@color/accent_primary"
+                                    android:textSize="28sp"
+                                    android:textStyle="bold"
+                                    app:autoSizeTextType="uniform" />
+
+                                <TextView
+                                    style="@style/TextAppearance.MotionPulse.Body"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:letterSpacing="0.0"
+                                    android:maxLines="2"
+                                    android:text="This week"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="14sp" />
+
+                                <TextView
+                                    android:id="@+id/tv_stat_weekly_trend"
+                                    style="@style/TextAppearance.MotionPulse.Caption"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:text="vs last week"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="12sp" />
+                            </LinearLayout>
+                        </com.google.android.material.card.MaterialCardView>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <Space
+                    android:layout_width="1dp"
+                    android:layout_height="16dp" />
+
+                <!-- Mood & Habits Graph Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="@color/card_background"
+                    app:cardCornerRadius="16dp"
+                    app:strokeColor="@color/card_border"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            style="@style/TextAppearance.MotionPulse.TitleMedium"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Mood &amp; habits, side by side"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <Space
+                            android:layout_width="1dp"
+                            android:layout_height="12dp" />
+
+                        <com.example.motionpulse.ui.views.MoodHabitsGraphCardView
+                            android:id="@+id/graph_card_view"
+                            android:layout_width="match_parent"
+                            android:layout_height="190dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <Space
+                    android:layout_width="1dp"
+                    android:layout_height="10dp" />
+
+                <!-- Insight Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/card_insight"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="@color/card_background"
+                    app:cardCornerRadius="16dp"
+                    app:strokeColor="@color/card_border"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="top"
+                        android:orientation="horizontal"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:gravity="center"
+                            android:text="💡"
+                            android:textSize="18sp" />
+
+                        <Space
+                            android:layout_width="12dp"
+                            android:layout_height="1dp" />
+
+                        <TextView
+                            android:id="@+id/tv_insight_text"
+                            style="@style/TextAppearance.MotionPulse.Body"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Log a few more days to unlock rhythm insights!"
+                            android:textColor="@color/text_primary"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <Space
+                    android:layout_width="1dp"
+                    android:layout_height="10dp" />
+
+                <!-- Best Day Card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/card_best_day"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="@color/card_background"
+                    app:cardCornerRadius="16dp"
+                    app:strokeColor="@color/card_border"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            style="@style/TextAppearance.MotionPulse.Caption"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:letterSpacing="0.04"
+                            android:text="BEST DAY THIS WEEK"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:id="@+id/tv_best_day_text"
+                            style="@style/TextAppearance.MotionPulse.TitleMedium"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="No best day logged yet"
+                            android:textColor="@color/text_primary"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
+
         </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 
-    </LinearLayout>
-
-</androidx.core.widget.NestedScrollView>
+</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
