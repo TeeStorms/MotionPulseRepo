@@ -13,6 +13,7 @@
         android:orientation="vertical"
         android:paddingBottom="96dp">
 
+        <!-- Droplet Header -->
         <com.example.motionpulse.ui.views.DropletHeaderView
             android:id="@+id/droplet_header"
             android:layout_width="match_parent"
@@ -20,31 +21,140 @@
 
         <Space
             android:layout_width="1dp"
-            android:layout_height="24dp" />
+            android:layout_height="16dp" />
 
-        <com.example.motionpulse.ui.views.MoodPillView
-            android:id="@+id/selected_mood_pill"
+        <!-- 5 Rising Bars Selector -->
+        <com.example.motionpulse.ui.views.MoodBarsView
+            android:id="@+id/mood_bars"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp" />
+
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="16dp" />
+
+        <!-- Selected Level Title (24sp Bold White) -->
+        <TextView
+            android:id="@+id/tv_selected_mood_title"
+            style="@style/TextAppearance.MotionPulse.TitleLarge"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_primary"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <!-- Caption -->
+        <TextView
+            android:id="@+id/tv_mood_subtitle"
+            style="@style/TextAppearance.MotionPulse.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:letterSpacing="0.0"
+            android:text="Tap a beat to log how you feel right now"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp" />
 
         <Space
             android:layout_width="1dp"
             android:layout_height="24dp" />
 
+        <!-- What's shaping it? Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp">
+
+            <TextView
+                style="@style/TextAppearance.MotionPulse.TitleMedium"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="What's shaping it?"
+                android:textColor="@color/text_primary"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <Space
+                android:layout_width="1dp"
+                android:layout_height="12dp" />
+
+            <!-- Factors ChipGroup (Multi-Select, match_parent) -->
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/cg_factors"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:chipSpacingHorizontal="8dp"
+                app:chipSpacingVertical="8dp"
+                app:singleSelection="false">
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_sleep"
+                    style="@style/Widget.MotionPulse.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="Sleep 😴"
+                    android:textSize="14sp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_work"
+                    style="@style/Widget.MotionPulse.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="Work 💼"
+                    android:textSize="14sp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_health"
+                    style="@style/Widget.MotionPulse.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="Health 🏃"
+                    android:textSize="14sp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_social"
+                    style="@style/Widget.MotionPulse.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="Social 👥"
+                    android:textSize="14sp" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_weather"
+                    style="@style/Widget.MotionPulse.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="40dp"
+                    android:text="Weather ☀️"
+                    android:textSize="14sp" />
+            </com.google.android.material.chip.ChipGroup>
+        </LinearLayout>
+
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="24dp" />
+
+        <!-- Optional Note Input -->
         <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_note"
             style="@style/Widget.MotionPulse.TextInputLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="24dp"
-            android:layout_marginEnd="24dp"
-            android:hint="Add a note or reflection...">
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:hint="Add a note (optional)">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/et_note"
                 android:layout_width="match_parent"
-                android:layout_height="120.dp"
+                android:layout_height="wrap_content"
                 android:gravity="top|start"
                 android:inputType="textMultiLine"
+                android:minLines="3"
                 android:textColor="@color/text_primary" />
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -52,14 +162,17 @@
             android:layout_width="1dp"
             android:layout_height="24dp" />
 
+        <!-- Log Mood Button -->
         <Button
-            android:id="@+id/btn_save_mood"
+            android:id="@+id/btn_log_mood"
             style="@style/Widget.MotionPulse.Button.Primary"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="24dp"
-            android:layout_marginEnd="24dp"
-            android:text="Save Today's Rhythm" />
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:enabled="false"
+            android:minHeight="52dp"
+            android:text="Log mood" />
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
