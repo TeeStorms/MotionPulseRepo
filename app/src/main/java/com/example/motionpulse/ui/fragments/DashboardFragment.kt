@@ -6,8 +6,10 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.room.Room
@@ -17,10 +19,14 @@ import com.example.motionpulse.data.repository.PreferenceRepository
 import com.example.motionpulse.databinding.FragmentDashboardBinding
 import com.example.motionpulse.domain.auth.AuthState
 import com.example.motionpulse.domain.auth.AuthViewModel
+import com.example.motionpulse.domain.models.FrequencyConfig
 import com.example.motionpulse.ui.adapters.HabitsAdapter
+import com.example.motionpulse.ui.views.MoodPillView
+import com.example.motionpulse.ui.views.StateLayout
 import com.example.motionpulse.ui.viewmodels.HabitsViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 class DashboardFragment : Fragment() {
 
@@ -57,28 +63,49 @@ class DashboardFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        binding.cardMoodBanner.setOnClickListener {
+            findNavController().navigate(R.id.mood)
+        }
+
         viewLifecycleOwner.lifecycleScope.launch {
-            authViewModel.authState.collectLatest { state ->
-                val uid = (state as? AuthState.Authenticated)?.uid ?: ""
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    authViewModel.isOffline.collectLatest { isOffline ->
+                        binding.tvOfflineBanner.visibility = if (isOffline) View.VISIBLE else View.GONE
+                    }
+                }
 
-                binding.dropletHeader.setTitle("Welcome back,\nUser")
-                binding.dropletHeader.setCaption("MOTION.PULSE")
+                launch {
+                    authViewModel.isSyncingFailed.collectLatest { failed ->
+                        binding.tvSyncErrorBanner.visibility = if (failed) View.VISIBLE else View.GONE
+                    }
+                }
 
-                if (uid.isNotEmpty()) {
-                    val habitsViewModel = ViewModelProvider(
-                        this@DashboardFragment,
-                        HabitsViewModel.Factory(db, uid, requireContext())
-                    )[HabitsViewModel::class.java]
+                launch {
+                    authViewModel.authState.collectLatest { state ->
+                        val uid = (state as? AuthState.Authenticated)?.uid ?: ""
 
-                    setupHabitsRecyclerView(habitsViewModel)
+                        binding.dropletHeader.setTitle("Welcome back,\nUser")
+                        binding.dropletHeader.setCaption("MOTION.PULSE")
+
+                        if (uid.isNotEmpty()) {
+                            val habitsViewModel = ViewModelProvider(
+                                this@DashboardFragment,
+                                HabitsViewModel.Factory(db, uid, requireContext())
+                            )[HabitsViewModel::class.java]
+
+                            setupDashboardContent(habitsViewModel)
+                        }
+                    }
                 }
             }
         }
     }
 
-    private fun setupHabitsRecyclerView(viewModel: HabitsViewModel) {
+    private fun setupDashboardContent(viewModel: HabitsViewModel) {
         habitsAdapter = HabitsAdapter(
-            onToggleComplete = { habit -> viewModel.toggleHabitCompletion(habit) },
+            showOverflow = false,
+            onToggleComplete = { habit -> viewModel.logHabitProgress(habit) },
             onItemClick = { habitId ->
                 val bundle = Bundle().apply { putString("habitId", habitId) }
                 findNavController().navigate(R.id.habit_detail, bundle)
@@ -93,13 +120,73 @@ class DashboardFragment : Fragment() {
             binding.swipeRefresh.isRefreshing = false
         }
 
+        binding.tvDailyQuote.text = viewModel.dailyQuote
+
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.allHabits.collectLatest { habits ->
-                habitsAdapter.submitList(habits)
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    viewModel.badgeEvent.collectLatest { badgeType ->
+                        com.google.android.material.snackbar.Snackbar.make(
+                            binding.root,
+                            "🎉 BADGE UNLOCKED: ${badgeType.name}",
+                            com.google.android.material.snackbar.Snackbar.LENGTH_LONG
+                        ).show()
+                    }
+                }
+
+                launch {
+                    viewModel.isMoodLoggedToday.collectLatest { logged ->
+                        binding.cardMoodBanner.visibility = if (!logged) View.VISIBLE else View.GONE
+                    }
+                }
+
+                launch {
+                    viewModel.todayMood.collectLatest { mood ->
+                        if (mood != null) {
+                            val moodPill = MoodPillView(requireContext()).apply {
+                                val moodName = mood.moodLevel.name.lowercase().replaceFirstChar { it.uppercase() }
+                                val colorHex = when (mood.moodLevel) {
+                                    com.example.motionpulse.data.local.entity.MoodLevel.ENERGIZED -> "#E040FB"
+                                    com.example.motionpulse.data.local.entity.MoodLevel.GOOD -> "#FF2A85"
+                                    com.example.motionpulse.data.local.entity.MoodLevel.STEADY -> "#4FC3F7"
+                                    com.example.motionpulse.data.local.entity.MoodLevel.LOW -> "#FFB74D"
+                                    com.example.motionpulse.data.local.entity.MoodLevel.DRAINED -> "#607D8B"
+                                }
+                                setMood(moodName, colorHex)
+                            }
+                            binding.dropletHeader.setTrailingView(moodPill)
+                        } else {
+                            binding.dropletHeader.setTrailingView(null)
+                        }
+                    }
+                }
+
+                launch {
+                    viewModel.allHabits.collectLatest { allHabitsWithStatus ->
+                        val today = LocalDate.now()
+                        val scheduledToday = allHabitsWithStatus.filter { habitWithStatus ->
+                            !habitWithStatus.habit.isArchived &&
+                            FrequencyConfig.decodeSafe(habitWithStatus.habit.frequencyConfig).isScheduled(today)
+                        }
+
+                        val completed = scheduledToday.count { it.isCompletedToday }
+                        val total = scheduledToday.size
+
+                        binding.tvProgressRatio.text = "$completed/$total"
+                        binding.progressRing.setProgress(completed, total)
+
+                        if (allHabitsWithStatus.isEmpty()) {
+                            binding.stateLayout.setState(StateLayout.State.EMPTY, "Add your first habit to get started")
+                        } else if (scheduledToday.isEmpty()) {
+                            binding.stateLayout.setState(StateLayout.State.EMPTY, "No habits scheduled for today")
+                        } else {
+                            binding.stateLayout.setState(StateLayout.State.CONTENT)
+                            habitsAdapter.submitList(scheduledToday)
+                        }
+                    }
+                }
             }
         }
-
-        binding.tvDailyQuote.text = viewModel.dailyQuote
     }
 
     override fun onDestroyView() {
