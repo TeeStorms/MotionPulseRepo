@@ -1,54 +1,152 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.swiperefreshlayout.widget.SwipeRefreshLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/swipe_refresh"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background_dark">
 
-    <androidx.core.widget.NestedScrollView
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipe_refresh"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:fillViewport="true">
+        android:layout_height="match_parent">
 
-        <LinearLayout
+        <androidx.core.widget.NestedScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingBottom="96dp">
+            android:layout_height="match_parent"
+            android:fillViewport="true">
 
-            <com.example.motionpulse.ui.views.DropletHeaderView
-                android:id="@+id/droplet_header"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
-            <com.google.android.material.textfield.TextInputLayout
-                style="@style/Widget.MotionPulse.TextInputLayout"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="24dp"
-                android:layout_marginTop="16dp"
-                android:layout_marginEnd="24dp"
-                android:hint="Search habits...">
+                android:orientation="vertical"
+                android:paddingBottom="88dp">
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/et_search"
+                <!-- Droplet Header -->
+                <com.example.motionpulse.ui.views.DropletHeaderView
+                    android:id="@+id/droplet_header"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <Space
+                    android:layout_width="1dp"
+                    android:layout_height="16dp" />
+
+                <!-- 1. Search Field (First below header) -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/til_search"
+                    style="@style/Widget.MotionPulse.TextInputLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="text"
-                    android:textColor="@color/text_primary" />
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp"
+                    android:hint="Search habits"
+                    app:endIconMode="clear_text"
+                    app:startIconDrawable="@drawable/ic_search"
+                    app:startIconTint="@color/text_secondary">
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rv_all_habits"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:clipToPadding="false"
-                android:paddingStart="24dp"
-                android:paddingEnd="24dp" />
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/et_search"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:imeOptions="actionSearch"
+                        android:inputType="text"
+                        android:textColor="@color/text_primary" />
+                </com.google.android.material.textfield.TextInputLayout>
 
-        </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
+                <Space
+                    android:layout_width="1dp"
+                    android:layout_height="12dp" />
 
-</androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+                <!-- 2. Category Filter Chips (Horizontal Scroll, 16dp end padding) -->
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipToPadding="false"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:scrollbars="none">
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/cg_categories"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:chipSpacingHorizontal="8dp"
+                        app:singleLine="true"
+                        app:singleSelection="true">
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chip_all"
+                            style="@style/Widget.MotionPulse.Chip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:checked="true"
+                            android:text="All" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chip_mind"
+                            style="@style/Widget.MotionPulse.Chip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:text="Mind &amp; Focus" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chip_fitness"
+                            style="@style/Widget.MotionPulse.Chip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:text="Fitness &amp; Health" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chip_routine"
+                            style="@style/Widget.MotionPulse.Chip"
+                            android:layout_width="wrap_content"
+                            android:layout_height="36dp"
+                            android:text="Daily Routine" />
+                    </com.google.android.material.chip.ChipGroup>
+                </HorizontalScrollView>
+
+                <Space
+                    android:layout_width="1dp"
+                    android:layout_height="16dp" />
+
+                <!-- 3. StateLayout Wrapping Habits List -->
+                <com.example.motionpulse.ui.views.StateLayout
+                    android:id="@+id/state_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp">
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rv_all_habits"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:nestedScrollingEnabled="false" />
+                </com.example.motionpulse.ui.views.StateLayout>
+
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+    <!-- 56dp Gradient Rounded Square Add Button (16dp radius) -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/fab_add_habit"
+        style="@style/Widget.MotionPulse.Button.Primary"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="96dp"
+        android:contentDescription="Add Habit"
+        android:insetLeft="0dp"
+        android:insetTop="0dp"
+        android:insetRight="0dp"
+        android:insetBottom="0dp"
+        android:padding="0dp"
+        android:text="+"
+        android:textColor="@color/text_primary"
+        android:textSize="28sp"
+        app:cornerRadius="16dp" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

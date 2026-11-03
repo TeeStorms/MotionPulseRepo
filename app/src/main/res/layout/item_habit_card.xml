@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/card_habit"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="10dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
+    app:cardBackgroundColor="@color/card_background"
+    app:cardCornerRadius="16dp"
+    app:strokeColor="#B3E01E79"
+    app:strokeWidth="1dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="72dp"
+        android:paddingStart="16dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="12dp">
+
+        <!-- Leading Status Control (48dp tap target with 40dp circle inside) -->
+        <FrameLayout
+            android:id="@+id/fl_status_dot_container"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:clickable="true"
+            android:focusable="true"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <ImageView
+                android:id="@+id/iv_status_dot"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center"
+                android:contentDescription="Toggle Habit Completion"
+                android:src="@drawable/ic_check" />
+        </FrameLayout>
+
+        <!-- Category Color Dot (8dp) -->
+        <View
+            android:id="@+id/view_category_dot"
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:layout_marginStart="12dp"
+            android:background="@drawable/bg_active_tab_circle"
+            app:layout_constraintBottom_toBottomOf="@id/tv_meta_line"
+            app:layout_constraintStart_toEndOf="@id/fl_status_dot_container"
+            app:layout_constraintTop_toTopOf="@id/tv_meta_line" />
+
+        <!-- Title Text (16sp bold) -->
+        <TextView
+            android:id="@+id/tv_title"
+            style="@style/TextAppearance.MotionPulse.TitleMedium"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="8dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:text="Habit Title"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toStartOf="@id/layout_trailing_container"
+            app:layout_constraintStart_toEndOf="@id/fl_status_dot_container"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- Meta Line: {category} . {frequency} -->
+        <TextView
+            android:id="@+id/tv_meta_line"
+            style="@style/TextAppearance.MotionPulse.Caption"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginEnd="8dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Fitness &amp; Health • Every day"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/layout_trailing_container"
+            app:layout_constraintStart_toEndOf="@id/view_category_dot"
+            app:layout_constraintTop_toBottomOf="@id/tv_title" />
+
+        <!-- Trailing Container (Score Pill + Optional 3-Dot Overflow) -->
+        <LinearLayout
+            android:id="@+id/layout_trailing_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <!-- Score Pill (28dp tall, #2A0F40 fill) -->
+            <FrameLayout
+                android:id="@+id/card_score_pill"
+                android:layout_width="wrap_content"
+                android:layout_height="28dp"
+                android:background="@drawable/bg_chip"
+                android:contentDescription="Strength score 100 percent"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp">
+
+                <TextView
+                    android:id="@+id/tv_score"
+                    style="@style/TextAppearance.MotionPulse.Caption"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="100%"
+                    android:textColor="@color/accent_primary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </FrameLayout>
+
+            <!-- 3-Dot Overflow Button (48dp, visible on Habits only) -->
+            <ImageButton
+                android:id="@+id/btn_overflow"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Habit Options"
+                android:padding="12dp"
+                android:src="@drawable/ic_group"
+                android:visibility="gone" />
+        </LinearLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.material.card.MaterialCardView>

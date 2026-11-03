@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_dialog"
+    android:padding="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Sheet Title -->
+        <TextView
+            android:id="@+id/tv_sheet_title"
+            style="@style/TextAppearance.MotionPulse.TitleLarge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Add Habit"
+            android:textSize="22sp" />
+
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="16dp" />
+
+        <!-- Category Section -->
+        <TextView
+            style="@style/TextAppearance.MotionPulse.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="CATEGORIES" />
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:scrollbars="none">
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/cg_sheet_categories"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:singleLine="true"
+                app:singleSelection="true">
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_cat_mind"
+                    style="@style/Widget.MotionPulse.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Mind &amp; Focus" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_cat_fitness"
+                    style="@style/Widget.MotionPulse.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Fitness &amp; Health" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/chip_cat_routine"
+                    style="@style/Widget.MotionPulse.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Daily Routine" />
+            </com.google.android.material.chip.ChipGroup>
+        </HorizontalScrollView>
+
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="16dp" />
+
+        <!-- Habit Name Input -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_title"
+            style="@style/Widget.MotionPulse.TextInputLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Name of the habit"
+            app:errorEnabled="true">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textCapWords"
+                android:textColor="@color/text_primary" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Suggestion Chips Row -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none">
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/cg_suggestions"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:singleLine="true" />
+        </HorizontalScrollView>
+
+        <!-- Duplicate Warning Text -->
+        <TextView
+            android:id="@+id/tv_duplicate_warning"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="⚠️ A habit with this name already exists"
+            android:textColor="#FFBB00"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="16dp" />
+
+        <!-- Goal Type Toggle -->
+        <TextView
+            style="@style/TextAppearance.MotionPulse.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="GOAL TYPE" />
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/toggle_goal_type"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:checkedButton="@id/btn_goal_yes_no"
+            app:selectionRequired="true"
+            app:singleSelection="true">
+
+            <Button
+                android:id="@+id/btn_goal_yes_no"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Yes / No"
+                android:textColor="@color/text_primary" />
+
+            <Button
+                android:id="@+id/btn_goal_numeric"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Numeric Target"
+                android:textColor="@color/text_primary" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <!-- Numeric Target Stepper Container -->
+        <LinearLayout
+            android:id="@+id/layout_numeric_goal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageButton
+                    android:id="@+id/btn_decrement"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:background="@drawable/bg_chip"
+                    android:contentDescription="Decrement Target"
+                    android:src="@drawable/ic_close" />
+
+                <EditText
+                    android:id="@+id/et_numeric_target"
+                    style="@style/TextAppearance.MotionPulse.TitleMedium"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:inputType="numberDecimal"
+                    android:text="10" />
+
+                <ImageButton
+                    android:id="@+id/btn_increment"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:background="@drawable/bg_chip"
+                    android:contentDescription="Increment Target"
+                    android:src="@drawable/ic_check" />
+            </LinearLayout>
+
+            <!-- Unit Chips -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:scrollbars="none">
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/cg_units"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:singleLine="true"
+                    app:singleSelection="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_unit_reps"
+                        style="@style/Widget.MotionPulse.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="reps" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_unit_mins"
+                        style="@style/Widget.MotionPulse.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="mins" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_unit_pages"
+                        style="@style/Widget.MotionPulse.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="pages" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_unit_glasses"
+                        style="@style/Widget.MotionPulse.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="glasses" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chip_unit_steps"
+                        style="@style/Widget.MotionPulse.Chip"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="steps" />
+                </com.google.android.material.chip.ChipGroup>
+            </HorizontalScrollView>
+
+            <TextView
+                android:id="@+id/tv_goal_preview"
+                style="@style/TextAppearance.MotionPulse.Caption"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Preview: 10 reps"
+                android:textColor="@color/accent_primary" />
+        </LinearLayout>
+
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="16dp" />
+
+        <!-- Reminder Time Row -->
+        <TextView
+            style="@style/TextAppearance.MotionPulse.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="REMINDER TIME" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_reminder_time"
+                style="@style/Widget.MotionPulse.Button.Secondary"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="09:00 AM" />
+
+            <ImageButton
+                android:id="@+id/btn_clear_reminder"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_chip"
+                android:contentDescription="Clear Reminder"
+                android:src="@drawable/ic_close"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="24dp" />
+
+        <!-- Save Button -->
+        <Button
+            android:id="@+id/btn_save_habit"
+            style="@style/Widget.MotionPulse.Button.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:enabled="false"
+            android:text="+ Add Habit" />
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
