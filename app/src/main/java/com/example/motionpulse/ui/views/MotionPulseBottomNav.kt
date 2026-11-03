@@ -3,9 +3,12 @@ package com.example.motionpulse.ui.views
 import android.content.Context
 import android.graphics.Color
 import android.util.AttributeSet
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.LinearLayout
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.navigation.NavController
 import com.example.motionpulse.R
 import com.example.motionpulse.databinding.ViewMotionPulseBottomNavBinding
@@ -22,7 +25,10 @@ class MotionPulseBottomNav @JvmOverloads constructor(
     private var currentDestinationId: Int? = null
 
     init {
-        orientation = HORIZONTAL
+        orientation = VERTICAL
+        clipChildren = false
+        clipToPadding = false
+
         binding = ViewMotionPulseBottomNavBinding.inflate(LayoutInflater.from(context), this, true)
 
         ChromeFontScaleHelper.applyMaxFontScale(binding.labelHome)
@@ -32,7 +38,16 @@ class MotionPulseBottomNav @JvmOverloads constructor(
         ChromeFontScaleHelper.applyMaxFontScale(binding.labelStats)
         ChromeFontScaleHelper.applyMaxFontScale(binding.labelProfile)
 
+        setupWindowInsets()
         setupClickListeners()
+    }
+
+    private fun setupWindowInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(this) { view, insets ->
+            val bottomInset = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
+            view.setPadding(view.paddingLeft, view.paddingTop, view.paddingRight, bottomInset)
+            insets
+        }
     }
 
     fun attachNavController(navController: NavController) {
@@ -91,23 +106,34 @@ class MotionPulseBottomNav @JvmOverloads constructor(
             binding.labelStats, binding.labelProfile
         )
 
-        containers.forEach { it.setBackgroundResource(0) }
+        containers.forEach {
+            it.setBackgroundResource(0)
+            it.translationY = 0f
+        }
         icons.forEach { it.setColorFilter(inactiveColor) }
         labels.forEach {
             it.setTextColor(inactiveColor)
             it.visibility = View.VISIBLE
         }
 
-        // Hide unselected labels if narrow width or font scale > 1.15
+        // Show all 6 labels when screen width >= 360dp AND font scale <= 1.15; otherwise show selected only
         val screenWidthDp = resources.configuration.screenWidthDp
         val fontScale = resources.configuration.fontScale
-        if (screenWidthDp < 360 || fontScale > 1.15f) {
+        val showAllLabels = screenWidthDp >= 360 && fontScale <= 1.15f
+
+        if (!showAllLabels) {
             labels.forEach { it.visibility = View.GONE }
         }
     }
 
     private fun selectTab(container: View, icon: android.widget.ImageView, label: android.widget.TextView) {
+        val raiseOffsetPx = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP,
+            -8f,
+            resources.displayMetrics
+        )
         container.setBackgroundResource(R.drawable.bg_active_tab_circle)
+        container.translationY = raiseOffsetPx
         icon.setColorFilter(Color.WHITE)
         label.setTextColor(Color.parseColor("#FF2A85"))
         label.visibility = View.VISIBLE
