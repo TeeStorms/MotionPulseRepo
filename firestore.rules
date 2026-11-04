@@ -36,6 +36,22 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.uid == userId;
       }
 
+      match /settings/{docId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if request.auth != null
+                     && request.auth.uid == userId
+                     && request.resource.data.keys().hasOnly(['language', 'remindersEnabled', 'shareMilestones', 'showHabitNames', 'updatedAt'])
+                     && (request.resource.data.remindersEnabled is bool)
+                     && (request.resource.data.shareMilestones is bool)
+                     && (request.resource.data.showHabitNames is bool)
+                     && (
+                          !('language' in request.resource.data) ||
+                          request.resource.data.language == null ||
+                          (request.resource.data.language is string && request.resource.data.language in ['en', 'af', 'tn', 'zu', 'ts'])
+                        )
+                     && (request.resource.data.updatedAt is timestamp || request.resource.data.updatedAt is int || request.resource.data.updatedAt is number);
+      }
+
       match /notifications/{notificationId} {
         // READ & DELETE: Owner only
         allow read, delete: if request.auth != null && request.auth.uid == userId;
@@ -77,10 +93,13 @@ service cloud.firestore {
       }
     }
 
-    // Public User Profiles (Any authenticated user can read; owner writes)
+    // Public User Profiles (Any authenticated user can get by UID; owner writes)
     match /publicProfiles/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow get: if request.auth != null;
+      allow list: if false;
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   && (!('displayName' in request.resource.data) || (request.resource.data.displayName is string && request.resource.data.displayName.size() >= 2 && request.resource.data.displayName.size() <= 30));
     }
 
     // Friend Requests
@@ -91,7 +110,12 @@ service cloud.firestore {
                     && request.resource.data.requesterUid == request.auth.uid
                     && request.resource.data.status == 'PENDING'
                     && ('participants' in request.resource.data)
+                    && request.resource.data.participants is list
+                    && request.resource.data.participants.size() == 2
                     && (request.auth.uid in request.resource.data.participants)
+                    && requestId == (request.resource.data.requesterUid < request.resource.data.recipientUid ? request.resource.data.requesterUid + '_' + request.resource.data.recipientUid : request.resource.data.recipientUid + '_' + request.resource.data.requesterUid)
+                    && (!('respondedAt' in request.resource.data) || request.resource.data.respondedAt == null)
+                    && request.resource.data.keys().hasOnly(['requesterUid', 'recipientUid', 'participants', 'status', 'createdAt', 'respondedAt'])
                     && !exists(/databases/$(database)/documents/users/$(request.resource.data.recipientUid)/blocks/$(request.auth.uid));
 
       allow update: if request.auth != null
@@ -99,7 +123,10 @@ service cloud.firestore {
                     && resource.data.recipientUid == request.auth.uid
                     && (request.resource.data.status == 'ACCEPTED' || request.resource.data.status == 'DECLINED');
 
-      allow delete: if request.auth != null && ('participants' in resource.data) && (request.auth.uid in resource.data.participants);
+      allow delete: if request.auth != null && (
+        (resource.data.status == 'PENDING' && resource.data.requesterUid == request.auth.uid) ||
+        (resource.data.status == 'ACCEPTED' && ('participants' in resource.data) && (request.auth.uid in resource.data.participants))
+      );
     }
 
     // Activity Feed (Friends-only audience model)
@@ -110,13 +137,22 @@ service cloud.firestore {
                     && request.resource.data.actorId == request.auth.uid
                     && ('visibleTo' in request.resource.data)
                     && (request.auth.uid in request.resource.data.visibleTo)
+                    && (!('habitName' in request.resource.data) || (request.resource.data.habitName is string && request.resource.data.habitName.size() <= 60))
                     && !exists(/databases/$(database)/documents/activityFeed/$(entryId));
 
-      allow update: if request.auth != null
-                    && ('visibleTo' in resource.data)
-                    && (request.auth.uid in resource.data.visibleTo)
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
-                    && request.resource.data.reactions.diff(resource.data.reactions).affectedKeys().hasOnly([request.auth.uid]);
+      allow update: if request.auth != null && (
+        (
+          ('visibleTo' in resource.data) &&
+          (request.auth.uid in resource.data.visibleTo) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']) &&
+          request.resource.data.reactions.diff(resource.data.reactions).affectedKeys().hasOnly([request.auth.uid])
+        ) ||
+        (
+          resource.data.actorId == request.auth.uid &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['habitName']) &&
+          !('habitName' in request.resource.data)
+        )
+      );
 
       allow delete: if request.auth != null && ('actorId' in resource.data) && resource.data.actorId == request.auth.uid;
     }
@@ -196,15 +232,9 @@ service cloud.firestore {
       allow delete: if request.auth != null && ('participants' in resource.data) && (request.auth.uid in resource.data.participants);
     }
 
-    // Friend Codes Mapping Documents (Lookups)
+    // Friend Codes Mapping Documents (Lookups handled exclusively by Cloud Functions API)
     match /friendCodes/{code} {
-      allow get: if request.auth != null;
-      allow list: if false;
-      allow create: if request.auth != null
-                    && request.resource.data.uid == request.auth.uid
-                    && !exists(/databases/$(database)/documents/friendCodes/$(code));
-      allow update: if false;
-      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow read, write: if false;
     }
 
     // Default-deny fallback rule for everything else

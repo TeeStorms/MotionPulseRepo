@@ -1037,4 +1037,238 @@ describe("Motion.Pulse Firestore Security Rules", () => {
     // After removal
     await assertFails(bobDb.collection("activityFeed").doc("feed1").get());
   });
+
+  describe("Settings store permissions & schema validation", () => {
+    test("owner can write valid preferences settings document", async () => {
+      const aliceDb = testEnv.authenticatedContext("alice").firestore();
+      await assertSucceeds(
+        aliceDb.collection("users").doc("alice").collection("settings").doc("preferences").set({
+          language: "en",
+          remindersEnabled: true,
+          shareMilestones: true,
+          showHabitNames: false,
+          updatedAt: Date.now()
+        })
+      );
+    });
+
+    test("non-owner cannot read or write another user's settings document", async () => {
+      const bobDb = testEnv.authenticatedContext("bob").firestore();
+      await assertFails(
+        bobDb.collection("users").doc("alice").collection("settings").doc("preferences").get()
+      );
+      await assertFails(
+        bobDb.collection("users").doc("alice").collection("settings").doc("preferences").set({
+          language: "en",
+          remindersEnabled: true,
+          shareMilestones: true,
+          showHabitNames: false,
+          updatedAt: Date.now()
+        })
+      );
+    });
+
+    test("owner write fails if unknown key is included", async () => {
+      const aliceDb = testEnv.authenticatedContext("alice").firestore();
+      await assertFails(
+        aliceDb.collection("users").doc("alice").collection("settings").doc("preferences").set({
+          language: "en",
+          remindersEnabled: true,
+          shareMilestones: true,
+          showHabitNames: false,
+          updatedAt: Date.now(),
+          unknownField: "malicious"
+        })
+      );
+    });
+
+    test("owner write fails if invalid language tag is supplied", async () => {
+      const aliceDb = testEnv.authenticatedContext("alice").firestore();
+      await assertFails(
+        aliceDb.collection("users").doc("alice").collection("settings").doc("preferences").set({
+          language: "invalid_lang_tag",
+          remindersEnabled: true,
+          shareMilestones: true,
+          showHabitNames: false,
+          updatedAt: Date.now()
+        })
+      );
+    });
+
+    test("owner write fails if wrong data type is provided for boolean fields", async () => {
+      const aliceDb = testEnv.authenticatedContext("alice").firestore();
+      await assertFails(
+        aliceDb.collection("users").doc("alice").collection("settings").doc("preferences").set({
+          language: "en",
+          remindersEnabled: "not_a_boolean",
+          shareMilestones: true,
+          showHabitNames: false,
+          updatedAt: Date.now()
+        })
+      );
+    });
+  });
+
+  describe("Public profile displayName schema validation", () => {
+    test("owner can update public profile displayName with 2-30 characters", async () => {
+      const aliceDb = testEnv.authenticatedContext("alice").firestore();
+      await assertSucceeds(
+        aliceDb.collection("publicProfiles").doc("alice").set({
+          uid: "alice",
+          displayName: "Zotwene"
+        })
+      );
+    });
+
+    test("non-owner cannot update public profile", async () => {
+      const bobDb = testEnv.authenticatedContext("bob").firestore();
+      await assertFails(
+        bobDb.collection("publicProfiles").doc("alice").set({
+          uid: "alice",
+          displayName: "BobHacker"
+        })
+      );
+    });
+
+    test("owner write fails if displayName is 1 character or 31 characters", async () => {
+      const aliceDb = testEnv.authenticatedContext("alice").firestore();
+      await assertFails(
+        aliceDb.collection("publicProfiles").doc("alice").set({
+          uid: "alice",
+          displayName: "A"
+        })
+      );
+      await assertFails(
+        aliceDb.collection("publicProfiles").doc("alice").set({
+          uid: "alice",
+          displayName: "A".repeat(31)
+        })
+      );
+    });
+  });
+
+  describe("Activity Feed habitName and author management", () => {
+    test("author can create feed entry with valid habitName <= 60 chars", async () => {
+      const aliceDb = testEnv.authenticatedContext("alice").firestore();
+      await assertSucceeds(
+        aliceDb.collection("activityFeed").doc("feed_valid").set({
+          actorId: "alice",
+          visibleTo: ["alice", "bob"],
+          habitName: "Morning Run"
+        })
+      );
+    });
+
+    test("author create fails if habitName exceeds 60 characters", async () => {
+      const aliceDb = testEnv.authenticatedContext("alice").firestore();
+      await assertFails(
+        aliceDb.collection("activityFeed").doc("feed_toolong").set({
+          actorId: "alice",
+          visibleTo: ["alice", "bob"],
+          habitName: "A".repeat(61)
+        })
+      );
+    });
+
+    test("author can delete own feed entry, non-author cannot", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await adminDb.collection("activityFeed").doc("feed_del").set({
+          actorId: "alice",
+          visibleTo: ["alice", "bob"]
+        });
+        await adminDb.terminate();
+      });
+
+      const bobDb = testEnv.authenticatedContext("bob").firestore();
+      await assertFails(bobDb.collection("activityFeed").doc("feed_del").delete());
+
+      const aliceDb = testEnv.authenticatedContext("alice").firestore();
+      await assertSucceeds(aliceDb.collection("activityFeed").doc("feed_del").delete());
+    });
+
+    test("author can update feed entry only to remove habitName", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await adminDb.collection("activityFeed").doc("feed_update").set({
+          actorId: "alice",
+          visibleTo: ["alice", "bob"],
+          habitName: "Reading"
+        });
+        await adminDb.terminate();
+      });
+
+      const aliceDb = testEnv.authenticatedContext("alice").firestore();
+      await assertSucceeds(
+        aliceDb.collection("activityFeed").doc("feed_update").update({
+          habitName: com.google.firebase.firestore.FieldValue.delete()
+        })
+      );
+    });
+  });
+
+  describe("Friend Requests creation and deletion", () => {
+    test("requester can create valid PENDING friend request with sorted docId", async () => {
+      const aliceDb = testEnv.authenticatedContext("alice").firestore();
+      await assertSucceeds(
+        aliceDb.collection("friendRequests").doc("alice_bob").set({
+          requesterUid: "alice",
+          recipientUid: "bob",
+          participants: ["alice", "bob"],
+          status: "PENDING",
+          createdAt: Date.now(),
+          respondedAt: null
+        })
+      );
+    });
+
+    test("requester can delete pending friend request", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await adminDb.collection("friendRequests").doc("alice_bob").set({
+          requesterUid: "alice",
+          recipientUid: "bob",
+          participants: ["alice", "bob"],
+          status: "PENDING",
+          createdAt: Date.now(),
+          respondedAt: null
+        });
+        await adminDb.terminate();
+      });
+
+      const aliceDb = testEnv.authenticatedContext("alice").firestore();
+      await assertSucceeds(aliceDb.collection("friendRequests").doc("alice_bob").delete());
+    });
+  });
+
+  describe("friendCodes and publicProfiles rules", () => {
+    test("stranger can get single friendCode document, but list is denied", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await adminDb.collection("friendCodes").doc("MP-2345-6789").set({ uid: "alice" });
+        await adminDb.terminate();
+      });
+
+      const bobDb = testEnv.authenticatedContext("bob").firestore();
+      await assertSucceeds(bobDb.collection("friendCodes").doc("MP-2345-6789").get());
+      await assertFails(bobDb.collection("friendCodes").get());
+    });
+
+    test("creating code with bad docId pattern fails", async () => {
+      const aliceDb = testEnv.authenticatedContext("alice").firestore();
+      await assertFails(aliceDb.collection("friendCodes").doc("INVALID_CODE").set({ uid: "alice" }));
+    });
+
+    test("publicProfiles get succeeds, list is denied", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await adminDb.collection("publicProfiles").doc("alice").set({ uid: "alice", displayName: "Alice" });
+        await adminDb.terminate();
+      });
+
+      const bobDb = testEnv.authenticatedContext("bob").firestore();
+      await assertSucceeds(bobDb.collection("publicProfiles").doc("alice").get());
+      await assertFails(bobDb.collection("publicProfiles").get());
+    });
+  });
 });
