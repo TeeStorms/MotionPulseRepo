@@ -3,6 +3,8 @@ const {
   assertFails,
   assertSucceeds,
 } = require("@firebase/rules-unit-testing");
+const firebase = require("firebase/compat/app");
+require("firebase/compat/firestore");
 const fs = require("fs");
 const path = require("path");
 
@@ -653,74 +655,18 @@ describe("Motion.Pulse Firestore Security Rules", () => {
     await assertFails(bobDb.collection("publicProfiles").doc("alice").set({ displayName: "Bob Fake Alice" }));
   });
 
-  test("friendCodes: signed-in user can get single code document", async () => {
-    await testEnv.withSecurityRulesDisabled(async (context) => {
-      const adminDb = context.firestore();
-      await adminDb.collection("friendCodes").doc("MP-ABCD-EFGH").set({
-        uid: "alice"
-      });
-      await adminDb.terminate();
-    });
-
-    const bobDb = testEnv.authenticatedContext("bob").firestore();
-    await assertSucceeds(bobDb.collection("friendCodes").doc("MP-ABCD-EFGH").get());
-  });
-
-  test("friendCodes: list operation is denied", async () => {
-    await testEnv.withSecurityRulesDisabled(async (context) => {
-      const adminDb = context.firestore();
-      await adminDb.collection("friendCodes").doc("MP-ABCD-EFGH").set({
-        uid: "alice"
-      });
-      await adminDb.terminate();
-    });
-
-    const bobDb = testEnv.authenticatedContext("bob").firestore();
-    await assertFails(bobDb.collection("friendCodes").get());
-  });
-
-  test("friendCodes: user can create code mapping for own UID but not for another UID", async () => {
+  test("friendCodes: direct client get, list, create, update, delete are denied for all users", async () => {
     const aliceDb = testEnv.authenticatedContext("alice").firestore();
-    await assertSucceeds(
-      aliceDb.collection("friendCodes").doc("MP-2345-6789").set({
-        uid: "alice"
-      })
-    );
-
     const bobDb = testEnv.authenticatedContext("bob").firestore();
-    await assertFails(
-      bobDb.collection("friendCodes").doc("MP-9876-5432").set({
-        uid: "alice"
-      })
-    );
-  });
 
-  test("friendCodes: overwriting an existing code document is denied", async () => {
-    await testEnv.withSecurityRulesDisabled(async (context) => {
-      const adminDb = context.firestore();
-      await adminDb.collection("friendCodes").doc("MP-ABCD-EFGH").set({
-        uid: "alice"
-      });
-      await adminDb.terminate();
-    });
-
-    const aliceDb = testEnv.authenticatedContext("alice").firestore();
-    await assertFails(
-      aliceDb.collection("friendCodes").doc("MP-ABCD-EFGH").set({
-        uid: "alice"
-      })
-    );
+    await assertFails(aliceDb.collection("friendCodes").doc("MP-ABCD-EFGH").get());
+    await assertFails(bobDb.collection("friendCodes").doc("MP-ABCD-EFGH").get());
+    await assertFails(aliceDb.collection("friendCodes").get());
+    await assertFails(aliceDb.collection("friendCodes").doc("MP-2345-6789").set({ uid: "alice" }));
+    await assertFails(bobDb.collection("friendCodes").doc("MP-2345-6789").set({ uid: "alice" }));
   });
 
   test("friendCodes: unauthenticated get is denied", async () => {
-    await testEnv.withSecurityRulesDisabled(async (context) => {
-      const adminDb = context.firestore();
-      await adminDb.collection("friendCodes").doc("MP-ABCD-EFGH").set({
-        uid: "alice"
-      });
-      await adminDb.terminate();
-    });
-
     const unauthDb = testEnv.unauthenticatedContext().firestore();
     await assertFails(unauthDb.collection("friendCodes").doc("MP-ABCD-EFGH").get());
   });
@@ -818,8 +764,8 @@ describe("Motion.Pulse Firestore Security Rules", () => {
       }, { merge: true })
     );
 
-    // Write friend code mapping
-    await assertSucceeds(
+    // Write friend code mapping directly from client fails under locked rules
+    await assertFails(
       aliceDb.collection("friendCodes").doc("MP-ALIC-EE01").set({
         uid: "alice"
       })
@@ -1201,7 +1147,7 @@ describe("Motion.Pulse Firestore Security Rules", () => {
       const aliceDb = testEnv.authenticatedContext("alice").firestore();
       await assertSucceeds(
         aliceDb.collection("activityFeed").doc("feed_update").update({
-          habitName: com.google.firebase.firestore.FieldValue.delete()
+          habitName: firebase.firestore.FieldValue.delete()
         })
       );
     });
@@ -1242,7 +1188,7 @@ describe("Motion.Pulse Firestore Security Rules", () => {
   });
 
   describe("friendCodes and publicProfiles rules", () => {
-    test("stranger can get single friendCode document, but list is denied", async () => {
+    test("stranger direct get and list on friendCodes are denied", async () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {
         const adminDb = context.firestore();
         await adminDb.collection("friendCodes").doc("MP-2345-6789").set({ uid: "alice" });
@@ -1250,7 +1196,7 @@ describe("Motion.Pulse Firestore Security Rules", () => {
       });
 
       const bobDb = testEnv.authenticatedContext("bob").firestore();
-      await assertSucceeds(bobDb.collection("friendCodes").doc("MP-2345-6789").get());
+      await assertFails(bobDb.collection("friendCodes").doc("MP-2345-6789").get());
       await assertFails(bobDb.collection("friendCodes").get());
     });
 

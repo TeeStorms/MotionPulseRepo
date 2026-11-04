@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Firestore security rules unit tests for Motion.Pulse",
   "scripts": {
-    "test": "jest"
+    "test": "jest test/firestore.test.js"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^3.0.1",
