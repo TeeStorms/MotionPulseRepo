@@ -107,8 +107,8 @@ License
 
 Add your license here (e.g. MIT).
 
-Zandile Selao 
-Ndabezinhle Mathunyane 
-Matlhogonolo Keebine 
-Tshiamo Mosetlha 
-Muhluri Nkuna 
+Zandile Selao ST10436981
+Ndabezinhle Mathunyane ST10457068
+Matlhogonolo Keebine ST10452412
+Tshiamo Mosetlha ST10451437
+Muhluri Nkuna ST10437226
