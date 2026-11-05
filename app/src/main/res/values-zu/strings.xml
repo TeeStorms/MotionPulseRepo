@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Machine translated draft / human overrides, needs native review -->
+<resources>
+    <string name="app_name">Motion.Pulse</string>
+    <string name="action_settings">Izilungiselelo</string>
+    <string name="error_empty_fields">Sicela ugcwalise zonke izikhala</string>
+    <string name="error_invalid_email">Sicela ufake ikheli le-imeyili elivumelekile</string>
+    <string name="error_short_password">Iphasiwedi kufanele ibe nezinhlamvu okungenani eziyisi-6</string>
+    <string name="error_password_mismatch">Amaphasiwedi awafani</string>
+    <string name="error_auth_failed">Ukuqinisekisa kuhlulekile. Sicela uzame futhi.</string>
+    <string name="error_session_verify_failed">Kuhlulekile ukuqinisekisa isikhathi sakho — sicela ungene ngemvume</string>
+    <string name="error_user_not_found">Ayikho i-akhawunti etholakele ngale imeyili.</string>
+    <string name="error_wrong_password">Iphasiwedi ayilungile. Zama futhi.</string>
+    <string name="error_no_internet">Alikho i-inthanethi — hlola inethiwekhi yakho bese uzama futhi.</string>
+    <string name="error_too_many_requests">Imizamo eminingi kakhulu. Sicela ulinde umzuzwana.</string>
+    <string name="error_generic_auth">Kube nephutha ngesikhathi sokuqinisekisa.</string>
+    <string name="info_reset_email_sent">Uma i-akhawunti ikhona ngale imeyili, isixhumanisi sokusetha kabusha sithunyelwe.</string>
+    <string name="error_email_collision">I-akhawunti enale imeyili ikhona kakade.</string>
+    <string name="error_weak_password">Iphasiwedi ibuthakathaka kakhulu — sebenzisa okungenani izinhlamvu eziyisi-6.</string>
+    <string name="error_profile_sync_failed">I-akhawunti idaliwe, kodwa asikwazanga ukumisa iphrofayela yakho.</string>
+    <string name="error_name_too_short">Igama kufanele libe nezinhlamvu okungenani eziyisi-2.</string>
+    <string name="error_google_no_accounts">Tawe ama-akhawunti we-Google atholakele kulolu cingo.</string>
+    <string name="error_google_config">Ukungena akumiswanga kahle.</string>
+    <string name="error_google_generic">Ukungena kuka-Google kuhlulekile.</string>
+    <string name="error_google_cancelled">Ukungena kukhanseliwe.</string>
+    <string name="settings_section_preferences">Okuthandwayo</string>
+    <string name="notifications_title">Izaziso</string>
+    <string name="feed_heading_recent_activity">Umsebenzi wakamuva</string>
+    <string name="language_en">IsiNgisi</string>
+    <string name="language_af">Afrikaans</string>
+    <string name="language_tn">Setswana</string>
+    <string name="language_zu">isiZulu</string>
+    <string name="language_ts">Xitsonga</string>
+    <string name="dialog_title_language">Ulimi</string>
+    <string name="feed_completed_all_habits">u-%1$s uqede zonke izikhuba</string>
+    <string name="feed_streak_at_risks">Uchungechunge luka-%1$s lusesengcupheni</string>
+    <string name="home_welcome_back">Siyakwamukela futhi,\n%1$s</string>
+    <string name="home_motivation_title">ISISUSEKO SOSUKU</string>
+    <string name="mood_header">Unjani umgqi wakho namuhla?</string>
+    <string name="mood_subtitle">Thepha isigqi ukuze ubhale ukuthi uzizwa kanjani njengamanje</string>
+    <string name="mood_factors_title">Yini ebumba lokhu?</string>
+    <string name="mood_factor_sleep">Lala 😴</string>
+    <string name="mood_factor_work">Umsebenzi 💼</string>
+    <string name="mood_factor_health">Impilo 🏃</string>
+    <string name="mood_factor_social">Okomphakathi 👥</string>
+    <string name="mood_factor_weather">Isimo Sezulu ☀️</string>
+    <string name="mood_level_energized">Unamandla</string>
+    <string name="mood_level_good">Kuhle</string>
+    <string name="mood_level_steady">Izinzile</string>
+    <string name="mood_level_low">Phansi</string>
+    <string name="mood_level_drained">Kukhishwe amanzi</string>
+    <string name="mood_button_log">Isimo sengqondo selogi</string>
+    <string name="mood_button_update">Buyekeza isimo sengqondo</string>
+    <string name="duels_title">I-Habit Duels</string>
+    <string name="duels_challenge_button">Inselelo kumngane</string>
+    <string name="duels_challenge_subtitle">Noma ubani obhale imikhuba eminingi ezinsukwini eziyi-7 uyawina. Uqala namuhla, uphela ezinsukwini eziyi-7.</string>
+    <string name="duel_vs">VS</string>
+    <string name="duel_you">Wena</string>
+    <string name="duel_unknown_user">Umsebenzisi Ongaziwa</string>
+    <string name="duel_victory">Ukunqoba 🎉</string>
+    <string name="duel_ends_today">Kuphela namuhla</string>
+    <string name="stats_insight_not_enough_data">Ngena ngemvume ezinsukwini ezimbalwa ezengeziwe ukuze uvule ukuqonda kwesigqi!</string>
+    <string name="stats_best_day_none">Akukho usuku oluhle kakhulu olubhalwe phansi okwamanje</string>
+    <plurals name="feed_streak_milestone">
+        <item quantity="one">%1$s ifinyelele uchungechunge losuku olulodwa</item>
+        <item quantity="other">%1$s ifinyelele uchungechunge lwezinsuku ezingu-%2$d</item>
+    </plurals>
+    <plurals name="feed_streak_milestone_with_habit">
+        <item quantity="one">%1$s ifinyelele usuku olulodwa ngokulandelana ku-\"%2$s\"</item>
+        <item quantity="other">%1$s ifinyelele uchungechunge lwezinsuku ezingu-%3$d ku-\"%2$s\"</item>
+    </plurals>
+    <plurals name="duel_days_left">
+        <item quantity="one">%1$d usuku olusele</item>
+        <item quantity="other">%1$d izinsuku ezisele</item>
+    </plurals>
+</resources>

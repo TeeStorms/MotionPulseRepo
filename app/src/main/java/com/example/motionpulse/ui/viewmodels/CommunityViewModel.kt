@@ -49,15 +49,12 @@ class CommunityViewModel(
         retryTrigger.value += 1
     }
 
-    // Local tracking of users nudged today
     private val _nudgedUsersToday = MutableStateFlow<Set<String>>(emptySet())
     val nudgedUsersToday: StateFlow<Set<String>> = _nudgedUsersToday.asStateFlow()
 
-    // Local tracking of muted users
     private val _mutedUserIds = MutableStateFlow<Set<String>>(emptySet())
     val mutedUserIds: StateFlow<Set<String>> = _mutedUserIds.asStateFlow()
 
-    // Honest delivery feedback message
     private val _nudgeFeedback = MutableStateFlow<String?>(null)
     val nudgeFeedback: StateFlow<String?> = _nudgeFeedback.asStateFlow()
 
@@ -103,7 +100,9 @@ class CommunityViewModel(
                         if (LocalDate.now().isAfter(end)) {
                             resolveDuel(duel)
                         }
-                    } catch (e: Exception) {}
+                    } catch (e: Exception) {
+                        android.util.Log.e("CommunityViewModel", "Error resolving duel date: ${e.message}", e)
+                    }
                 }
             }
         }
@@ -150,6 +149,7 @@ class CommunityViewModel(
     private val _leaderboardMetric = MutableStateFlow(LeaderboardMetric.WEEKLY_XP)
     val leaderboardMetric: StateFlow<LeaderboardMetric> = _leaderboardMetric.asStateFlow()
 
+    // FIXED: Combine actual local habits with remote profiles to get accurate XP for self and others
     val leaderboardState: StateFlow<UiState<List<UserProfileEntity>>> = combine(
         friendsState,
         _leaderboardMetric,
@@ -157,6 +157,7 @@ class CommunityViewModel(
     ) { state, metric, habits ->
         val maxStreak = habits.maxOfOrNull { it.currentStreak } ?: 0
         val correctedSelf = _userProfile.value?.copy(currentStreak = maxStreak)
+
         when (state) {
             is UiState.Success -> {
                 val all = state.data + listOfNotNull(correctedSelf)
@@ -228,7 +229,7 @@ class CommunityViewModel(
                     }
                     val localAll = db.friendDao().getAllFriendships(userId).first()
                     val remoteIds = state.data.map { it.id }.toSet()
-                    localAll.filter { it.id !in remoteIds }.forEach { 
+                    localAll.filter { it.id !in remoteIds }.forEach {
                         db.friendDao().deleteFriend(it)
                     }
                 }
@@ -237,46 +238,112 @@ class CommunityViewModel(
     }
 
     private val searchTimestamps = mutableListOf<Long>()
+    private val _isSearching = MutableStateFlow(false)
+    val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
-    fun searchByCode(code: String) {
+    private val _searchState = MutableStateFlow<com.example.motionpulse.domain.models.FriendSearchUiState>(com.example.motionpulse.domain.models.FriendSearchUiState.Idle)
+    val searchState: StateFlow<com.example.motionpulse.domain.models.FriendSearchUiState> = _searchState.asStateFlow()
+
+    private var searchJob: kotlinx.coroutines.Job? = null
+
+    fun resetSearchState() {
+        _searchState.value = com.example.motionpulse.domain.models.FriendSearchUiState.Idle
+        _searchResult.value = null
+        _searchError.value = null
+    }
+
+    fun searchByCode(code: String, context: android.content.Context) {
         val now = System.currentTimeMillis()
         searchTimestamps.removeAll { now - it > 60_000L }
         if (searchTimestamps.size >= 10) {
-            _searchError.value = "Too many search attempts. Try again in a moment."
-            _searchResult.value = null
+            val secs = 60
+            _searchState.value = com.example.motionpulse.domain.models.FriendSearchUiState.RateLimited(secs)
+            _searchError.value = "Too many searches. Try again in $secs seconds."
             return
         }
         searchTimestamps.add(now)
 
-        viewModelScope.launch {
+        searchJob?.cancel()
+
+        searchJob = viewModelScope.launch {
+            _isSearching.value = true
+            _searchState.value = com.example.motionpulse.domain.models.FriendSearchUiState.Loading
             _searchError.value = null
             _searchResult.value = null
             try {
-                val result = communityRepository.findUserByFriendCode(code)
-                if (result == null) {
-                    _searchError.value = "No account found with that code."
-                } else if (result.uid == userId) {
-                    _searchError.value = "You cannot add yourself"
-                } else {
-                    _searchResult.value = result
+                val myProfile = userProfile.value
+                val res = communityRepository.findUserByFriendCode(code, userId, myProfile?.friendCode, context)
+                when (res) {
+                    is com.example.motionpulse.domain.models.FriendLookupResult.Found -> {
+                        _searchState.value = com.example.motionpulse.domain.models.FriendSearchUiState.Found(res.profile)
+                        _searchResult.value = res.profile
+                    }
+                    is com.example.motionpulse.domain.models.FriendLookupResult.NotFound -> {
+                        val err = "No account found with that code. Check it with your friend."
+                        val debug = if (com.example.motionpulse.BuildConfig.DEBUG) "debug: NOT_FOUND friendCodes/$code" else null
+                        _searchState.value = com.example.motionpulse.domain.models.FriendSearchUiState.Error(err, debug)
+                        _searchError.value = err
+                    }
+                    is com.example.motionpulse.domain.models.FriendLookupResult.Self -> {
+                        val err = res.message
+                        val debug = if (com.example.motionpulse.BuildConfig.DEBUG) "debug: SELF_LOOKUP $code" else null
+                        _searchState.value = com.example.motionpulse.domain.models.FriendSearchUiState.Error(err, debug)
+                        _searchError.value = err
+                    }
+                    is com.example.motionpulse.domain.models.FriendLookupResult.InvalidFormat -> {
+                        val err = res.message
+                        val debug = if (com.example.motionpulse.BuildConfig.DEBUG) "debug: INVALID_FORMAT $code" else null
+                        _searchState.value = com.example.motionpulse.domain.models.FriendSearchUiState.Error(err, debug)
+                        _searchError.value = err
+                    }
+                    is com.example.motionpulse.domain.models.FriendLookupResult.RateLimited -> {
+                        _searchState.value = com.example.motionpulse.domain.models.FriendSearchUiState.RateLimited(res.seconds)
+                        _searchError.value = "Too many searches. Try again in ${res.seconds} seconds."
+                    }
+                    is com.example.motionpulse.domain.models.FriendLookupResult.Offline -> {
+                        val err = res.message
+                        val debug = if (com.example.motionpulse.BuildConfig.DEBUG) "debug: OFFLINE $code" else null
+                        _searchState.value = com.example.motionpulse.domain.models.FriendSearchUiState.Error(err, debug)
+                        _searchError.value = err
+                    }
+                    is com.example.motionpulse.domain.models.FriendLookupResult.PermissionDenied -> {
+                        val err = res.message
+                        val debug = if (com.example.motionpulse.BuildConfig.DEBUG) "debug: PERMISSION_DENIED friendCodes/$code" else null
+                        _searchState.value = com.example.motionpulse.domain.models.FriendSearchUiState.Error(err, debug)
+                        _searchError.value = err
+                    }
+                    is com.example.motionpulse.domain.models.FriendLookupResult.Error -> {
+                        val err = res.message
+                        val debug = if (com.example.motionpulse.BuildConfig.DEBUG) "debug: ERROR $code" else null
+                        _searchState.value = com.example.motionpulse.domain.models.FriendSearchUiState.Error(err, debug)
+                        _searchError.value = err
+                    }
                 }
             } catch (e: Exception) {
-                _searchError.value = "Search failed"
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                val err = "Couldn't search right now. Try again."
+                val debug = if (com.example.motionpulse.BuildConfig.DEBUG) "debug: EXCEPTION ${e.javaClass.simpleName}" else null
+                _searchState.value = com.example.motionpulse.domain.models.FriendSearchUiState.Error(err, debug)
+                _searchError.value = err
+            } finally {
+                _isSearching.value = false
             }
         }
     }
 
     fun sendFriendRequest(recipientId: String, recipientName: String? = null) {
         viewModelScope.launch {
-            _userProfile.value?.let {
-                try {
-                    communityRepository.sendFriendRequest(userId, it.displayName, recipientId)
-                    _searchResult.value = null
-                    val displayName = recipientName ?: searchResult.value?.displayName ?: "user"
-                    _nudgeFeedback.value = "Request sent to $displayName"
-                } catch (e: Exception) {
-                    _searchError.value = e.message ?: "Failed to send friend request"
-                }
+            val senderName = _userProfile.value?.displayName?.ifBlank { null }
+                ?: db.userProfileDao().getProfile(userId).first()?.displayName?.ifBlank { null }
+                ?: com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.displayName?.ifBlank { null }
+                ?: "User"
+            try {
+                communityRepository.sendFriendRequest(userId, senderName, recipientId)
+                _searchResult.value = null
+                val displayName = recipientName ?: searchResult.value?.displayName ?: "user"
+                _nudgeFeedback.value = "Request sent to $displayName"
+            } catch (e: Exception) {
+                _searchError.value = e.message ?: "Failed to send friend request"
             }
         }
     }
@@ -326,9 +393,10 @@ class CommunityViewModel(
         }
     }
 
+    // Safely calculates XP for the last 7 days
     private fun computeWeeklyXp(profile: UserProfileEntity): Long {
         val weekAgo = LocalDate.now().minusDays(7)
-        return profile.recentXp.filterKeys { 
+        return profile.recentXp.filterKeys {
             try { LocalDate.parse(it).isAfter(weekAgo.minusDays(1)) } catch(e: Exception) { false }
         }.values.sum()
     }
@@ -342,7 +410,7 @@ class CommunityViewModel(
     fun sendNudge(targetUserId: String) {
         if (targetUserId == userId) return
         if (targetUserId in _nudgedUsersToday.value) return
-        
+
         viewModelScope.launch {
             val dayBucket = java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString()
             val alreadyNudged = communityPreferences?.hasNudgedTodayFlow(targetUserId, dayBucket)?.first() ?: false

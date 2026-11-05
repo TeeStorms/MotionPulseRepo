@@ -1,12 +1,20 @@
 package com.example.motionpulse
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
 import android.os.Bundle
 import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.fragment.NavHostFragment
+import com.example.motionpulse.data.repository.PreferenceRepository
 import com.example.motionpulse.databinding.ActivityMainBinding
+import com.example.motionpulse.ui.notifications.HabitReminderReceiver
+import com.example.motionpulse.util.LocaleHelper
 
 class MainActivity : AppCompatActivity() {
 
@@ -14,6 +22,24 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
+
+        // Create Notification Channel for Habit Reminders
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channel = NotificationChannel(
+            HabitReminderReceiver.CHANNEL_ID,
+            getString(R.string.notifications_title),
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = "Notifications for habit reminders"
+        }
+        notificationManager.createNotificationChannel(channel)
+
+        // Apply saved locale before first layout inflation
+        val preferenceRepository = PreferenceRepository(applicationContext)
+        val savedSettings = preferenceRepository.getUserSettings()
+        val targetLocale = LocaleHelper.resolveSupportedLocaleTag(savedSettings.language)
+        AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(targetLocale))
+
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 

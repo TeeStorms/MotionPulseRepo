@@ -121,7 +121,7 @@ class HabitDetailFragment : Fragment() {
                             binding.dropletHeader.setTitle(habit.title)
                             binding.dropletHeader.setCaption(habit.category.uppercase())
 
-                            val scorePct = (habit.habitStrengthScore * 100).toInt().coerceIn(0, 100)
+                            val scorePct = com.example.motionpulse.util.HabitStrengthFormatter.toPercent(habit.habitStrengthScore)
                             binding.tvStrengthScore.text = "$scorePct%"
                             binding.tvCurrentStreak.text = "${habit.currentStreak}d"
                             binding.tvLongestStreak.text = "${habit.longestStreak}d"

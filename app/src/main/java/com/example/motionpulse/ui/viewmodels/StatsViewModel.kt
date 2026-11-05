@@ -1,5 +1,6 @@
 package com.example.motionpulse.ui.viewmodels
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -8,26 +9,51 @@ import com.example.motionpulse.data.local.entity.CompletionStatus
 import com.example.motionpulse.data.local.entity.UserProfileEntity
 import com.example.motionpulse.data.repository.AuthRepository
 import com.example.motionpulse.data.repository.HabitRepository
+import com.example.motionpulse.data.repository.PreferenceRepository
 import com.example.motionpulse.domain.models.FrequencyConfig
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.time.temporal.TemporalAdjusters
+import java.util.Locale
 
 class StatsViewModel(
     private val db: AppDatabase,
     private val userId: String,
+    private val context: Context,
     private val habitRepository: HabitRepository = HabitRepository(db),
     private val authRepository: AuthRepository = AuthRepository()
 ) : ViewModel() {
 
+    private val preferenceRepository = PreferenceRepository(context)
+
     private val _celebrationEvent = MutableSharedFlow<Unit>()
     val celebrationEvent: SharedFlow<Unit> = _celebrationEvent.asSharedFlow()
 
+    private val _weekOffset = MutableStateFlow(0)
+    val weekOffset: StateFlow<Int> = _weekOffset.asStateFlow()
+
+    val weekLabel: StateFlow<String> = _weekOffset.map { offset ->
+        val range = weekRange(offset)
+        val formatter = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
+        "${range.start.format(formatter)} - ${range.endInclusive.format(formatter)}"
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    fun previousWeek() {
+        _weekOffset.value -= 1
+    }
+
+    fun nextWeek() {
+        if (_weekOffset.value < 0) {
+            _weekOffset.value += 1
+        }
+    }
+
     init {
         if (userId.isNotEmpty()) {
-            // Maintains real-time local persistence of the user's remote profile.
             viewModelScope.launch {
                 authRepository.getUserProfileFlow(userId).collect { remoteProfile ->
                     remoteProfile?.let {
@@ -36,8 +62,6 @@ class StatsViewModel(
                 }
             }
 
-            // Handles multi-layered synchronization for habits.
-            // Completions are synced individually via repository snapshots.
             viewModelScope.launch {
                 habitRepository.getRemoteHabitsFlow(userId).collect { remoteHabits ->
                     for (habit in remoteHabits) {
@@ -56,120 +80,133 @@ class StatsViewModel(
         .getMoodFlowForDate(userId, LocalDate.now())
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val summaryStats: StateFlow<SummaryStats> = db.habitDao().getHabitsForUser(userId)
-        .combine(db.habitCompletionDao().getAllCompletionsFlow()) { habits, completions ->
-            val today = LocalDate.now()
-            val startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-            val weekDates = (0..6).map { startOfWeek.plusDays(it.toLong()) }
-            
-            // Previous week range
-            val startOfPrevWeek = startOfWeek.minusWeeks(1)
-            val prevWeekDates = (0..6).map { startOfPrevWeek.plusDays(it.toLong()) }
+    val summaryStats: StateFlow<SummaryStats> = combine(
+        db.habitDao().getHabitsForUser(userId),
+        db.habitCompletionDao().getAllCompletionsFlow(),
+        _weekOffset
+    ) { habits, completions, offset ->
+        val today = LocalDate.now()
+        val targetDate = today.plusWeeks(offset.toLong())
+        val startOfWeek = targetDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        val endOfRange = if (offset == 0) today else startOfWeek.plusDays(6)
+        val weekDates = generateSequence(startOfWeek) { it.plusDays(1) }.takeWhile { !it.isAfter(endOfRange) }.toList()
+        
+        val startOfPrevWeek = startOfWeek.minusWeeks(1)
+        val prevWeekDates = (0..6).map { startOfPrevWeek.plusDays(it.toLong()) }
 
-            val habitCompletionsMap = completions.groupBy { it.habitId }
-            
-            // Done Today: count of today's scheduled habits with a COMPLETED record
-            val scheduledToday = habits.filter { habit ->
-                FrequencyConfig.decodeSafe(habit.frequencyConfig).isScheduled(today)
-            }
-            val doneToday = scheduledToday.count { habit ->
-                habitCompletionsMap[habit.id]?.any { it.date == today && it.status == CompletionStatus.COMPLETED } ?: false
-            }
-            
-            val totalCompleted = completions.count { it.status == CompletionStatus.COMPLETED }
-            val currentStreak = habits.maxOfOrNull { it.currentStreak } ?: 0
-            
-            // Aggregates performance metrics for the current week (Monday–Sunday).
-            var totalScheduledWeek = 0
-            var totalCompletedWeek = 0
-            for (habit in habits) {
-                val config = FrequencyConfig.decodeSafe(habit.frequencyConfig)
-                val habitCompletions = habitCompletionsMap[habit.id] ?: emptyList()
-                for (date in weekDates) {
-                    if (config.isScheduled(date)) {
-                        totalScheduledWeek++
-                        if (habitCompletions.any { it.date == date && it.status == CompletionStatus.COMPLETED }) {
-                            totalCompletedWeek++
-                        }
-                    }
-                }
-            }
-            
-            val weeklyPercent = if (totalScheduledWeek > 0) {
-                (totalCompletedWeek.toFloat() / totalScheduledWeek * 100).toInt()
-            } else 0
-
-            // Compares the current week's performance against the previous week to determine the trend.
-            var totalScheduledPrev = 0
-            var totalCompletedPrev = 0
-            for (habit in habits) {
-                val config = FrequencyConfig.decodeSafe(habit.frequencyConfig)
-                val habitCompletions = habitCompletionsMap[habit.id] ?: emptyList()
-                for (date in prevWeekDates) {
-                    if (config.isScheduled(date)) {
-                        totalScheduledPrev++
-                        if (habitCompletions.any { it.date == date && it.status == CompletionStatus.COMPLETED }) {
-                            totalCompletedPrev++
-                        }
-                    }
-                }
-            }
-            val prevWeeklyPercent = if (totalScheduledPrev > 0) {
-                (totalCompletedPrev.toFloat() / totalScheduledPrev * 100).toInt()
-            } else 0
-
-            SummaryStats(
-                doneToday = doneToday,
-                totalHabits = scheduledToday.size,
-                currentStreak = currentStreak,
-                totalCompleted = totalCompleted,
-                weeklyPercent = weeklyPercent,
-                weeklyTrend = weeklyPercent - prevWeeklyPercent
-            )
+        val habitCompletionsMap = completions.groupBy { it.habitId }
+        
+        val scheduledToday = habits.filter { habit ->
+            !habit.isArchived && FrequencyConfig.decodeSafe(habit.frequencyConfig).isScheduled(today)
         }
+        val doneToday = scheduledToday.count { habit ->
+            habitCompletionsMap[habit.id]?.any { it.date == today && it.status == CompletionStatus.COMPLETED } ?: false
+        }
+        
+        val totalCompleted = completions.count { it.status == CompletionStatus.COMPLETED }
+        val currentStreak = habits.maxOfOrNull { it.currentStreak } ?: 0
+        
+        var totalScheduledWeek = 0
+        var totalCompletedWeek = 0
+        for (habit in habits) {
+            if (habit.isArchived) continue
+            val config = FrequencyConfig.decodeSafe(habit.frequencyConfig)
+            val habitCompletions = habitCompletionsMap[habit.id] ?: emptyList()
+            for (date in weekDates) {
+                val createdDate = habit.createdAt.atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                if (!date.isBefore(createdDate) && config.isScheduled(date)) {
+                    totalScheduledWeek++
+                    if (habitCompletions.any { it.date == date && it.status == CompletionStatus.COMPLETED }) {
+                        totalCompletedWeek++
+                    }
+                }
+            }
+        }
+        
+        val weeklyPercent = if (totalScheduledWeek > 0) {
+            (totalCompletedWeek.toFloat() / totalScheduledWeek * 100).toInt().coerceIn(0, 100)
+        } else 0
+
+        var totalScheduledPrev = 0
+        var totalCompletedPrev = 0
+        for (habit in habits) {
+            if (habit.isArchived) continue
+            val config = FrequencyConfig.decodeSafe(habit.frequencyConfig)
+            val habitCompletions = habitCompletionsMap[habit.id] ?: emptyList()
+            for (date in prevWeekDates) {
+                val createdDate = habit.createdAt.atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                if (!date.isBefore(createdDate) && config.isScheduled(date)) {
+                    totalScheduledPrev++
+                    if (habitCompletions.any { it.date == date && it.status == CompletionStatus.COMPLETED }) {
+                        totalCompletedPrev++
+                    }
+                }
+            }
+        }
+        val weeklyTrendStr = if (totalScheduledPrev > 0) {
+            val prevWeeklyPercent = (totalCompletedPrev.toFloat() / totalScheduledPrev * 100).toInt()
+            val diff = weeklyPercent - prevWeeklyPercent
+            if (diff >= 0) "+$diff%" else "$diff%"
+        } else {
+            "--"
+        }
+
+        SummaryStats(
+            doneToday = doneToday,
+            totalHabits = scheduledToday.size,
+            currentStreak = currentStreak,
+            totalCompleted = totalCompleted,
+            weeklyPercent = weeklyPercent,
+            weeklyTrendStr = weeklyTrendStr
+        )
+    }
+        .flowOn(Dispatchers.Default)
+        .distinctUntilChanged()
         .catch { emit(SummaryStats()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SummaryStats())
 
-    private val weeklyRawDataFlow = combine(
-        db.moodDao().getMoodsForDateRange(
-            userId, 
-            LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)),
-            LocalDate.now().with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY))
-        ),
-        db.habitDao().getHabitsForUser(userId),
-        db.habitCompletionDao().getAllCompletionsFlow()
-    ) { moods, habits, completions ->
-        Triple(moods, habits, completions)
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val weeklyRawDataFlow = _weekOffset.flatMapLatest { offset ->
+        val range = weekRange(offset)
+        combine(
+            db.moodDao().getMoodsForDateRange(userId, range.start, range.endInclusive),
+            db.habitDao().getHabitsForUser(userId),
+            db.habitCompletionDao().getAllCompletionsFlow()
+        ) { moods, habits, completions ->
+            val days = (0..6).map { i ->
+                val date = range.start.plusDays(i.toLong())
+                val mood = moods.find { it.date == date }
+
+                val habitCompletions = habits.filter { habit ->
+                    !habit.isArchived && FrequencyConfig.decodeSafe(habit.frequencyConfig).isScheduled(date)
+                }.map { habit ->
+                    completions.any { it.habitId == habit.id && it.date == date && it.status == CompletionStatus.COMPLETED }
+                }
+
+                com.example.motionpulse.domain.stats.DayData(
+                    date = date,
+                    moodLevel = mood?.moodLevel,
+                    habitCompletions = habitCompletions
+                )
+            }
+            com.example.motionpulse.domain.stats.WeeklyCorrelationData(days)
+        }
     }
 
-    val weeklyCorrelationData: StateFlow<com.example.motionpulse.domain.stats.WeeklyCorrelationData> = weeklyRawDataFlow.map { (moods, habits, completions) ->
-        val today = LocalDate.now()
-        val startOfWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-        
-        val days = (0..6).map { i ->
-            val date = startOfWeek.plusDays(i.toLong())
-            val mood = moods.find { it.date == date }
-            
-            val habitCompletions = habits.filter { 
-                FrequencyConfig.decodeSafe(it.frequencyConfig).isScheduled(date) 
-            }.map { habit ->
-                completions.any { it.habitId == habit.id && it.date == date && it.status == CompletionStatus.COMPLETED }
-            }
-            
-            com.example.motionpulse.domain.stats.DayData(
-                date = date,
-                moodLevel = mood?.moodLevel,
-                habitCompletions = habitCompletions
-            )
-        }
-        com.example.motionpulse.domain.stats.WeeklyCorrelationData(days)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.example.motionpulse.domain.stats.WeeklyCorrelationData())
+    val weeklyCorrelationData: StateFlow<com.example.motionpulse.domain.stats.WeeklyCorrelationData> = weeklyRawDataFlow
+        .flowOn(Dispatchers.Default)
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.example.motionpulse.domain.stats.WeeklyCorrelationData())
 
-    val correlationInsight: StateFlow<String> = weeklyRawDataFlow.map { (moods, habits, completions) ->
+    val correlationInsight: StateFlow<String> = weeklyRawDataFlow.map { state ->
+        val moods = state.days.mapNotNull { day -> day.moodLevel?.let { com.example.motionpulse.data.local.entity.MoodEntity(userId = userId, date = day.date, moodLevel = it) } }
         com.example.motionpulse.domain.scoring.MoodHabitInsightGenerator.generateInsight(
-            moods, habits, completions
+            moods, emptyList(), emptyList()
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+    }
+        .flowOn(Dispatchers.Default)
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
     val bestDayInfo: StateFlow<BestDayInfo?> = weeklyCorrelationData.map { state ->
         state.days.filter { it.moodLevel != null }.maxByOrNull { day ->
@@ -186,17 +223,10 @@ class StatsViewModel(
                 totalHabits = maxOf(1, bestDayData.habitCompletions.size)
             )
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-
-    private fun scoreToMoodLevel(score: Int): com.example.motionpulse.data.local.entity.MoodLevel {
-        return when (score) {
-            1 -> com.example.motionpulse.data.local.entity.MoodLevel.DRAINED
-            2 -> com.example.motionpulse.data.local.entity.MoodLevel.LOW
-            3 -> com.example.motionpulse.data.local.entity.MoodLevel.STEADY
-            4 -> com.example.motionpulse.data.local.entity.MoodLevel.GOOD
-            else -> com.example.motionpulse.data.local.entity.MoodLevel.ENERGIZED
-        }
     }
+        .flowOn(Dispatchers.Default)
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private fun moodToScore(level: com.example.motionpulse.data.local.entity.MoodLevel): Int = when (level) {
         com.example.motionpulse.data.local.entity.MoodLevel.DRAINED -> 1
@@ -206,22 +236,35 @@ class StatsViewModel(
         com.example.motionpulse.data.local.entity.MoodLevel.ENERGIZED -> 5
     }
 
-    // Dedicated celebration trigger
+    // 100% celebration tracked once per week
     init {
         summaryStats
             .map { it.weeklyPercent }
             .distinctUntilChanged()
             .onEach { percent ->
-                if (percent == 100) {
-                    _celebrationEvent.emit(Unit)
+                if (percent == 100 && _weekOffset.value == 0) {
+                    val currentWeekKey = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toString()
+                    val lastCelebrated = preferenceRepository.getLastCelebratedWeek()
+                    if (lastCelebrated != currentWeekKey) {
+                        preferenceRepository.setLastCelebratedWeek(currentWeekKey)
+                        _celebrationEvent.emit(Unit)
+                    }
                 }
             }
             .launchIn(viewModelScope)
     }
 
-    class Factory(private val db: AppDatabase, private val userId: String) : ViewModelProvider.Factory {
+    class Factory(private val db: AppDatabase, private val userId: String, private val context: Context) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            return StatsViewModel(db, userId) as T
+            return StatsViewModel(db, userId, context.applicationContext) as T
+        }
+    }
+
+    companion object {
+        fun weekRange(offset: Int, today: LocalDate = LocalDate.now()): ClosedRange<LocalDate> {
+            val startOfWeek = today.plusWeeks(offset.toLong()).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+            val endOfWeek = startOfWeek.plusDays(6)
+            return startOfWeek..endOfWeek
         }
     }
 }
@@ -232,7 +275,7 @@ data class SummaryStats(
     val currentStreak: Int = 0,
     val totalCompleted: Int = 0,
     val weeklyPercent: Int = 0,
-    val weeklyTrend: Int? = null
+    val weeklyTrendStr: String = "--"
 )
 
 data class BestDayInfo(

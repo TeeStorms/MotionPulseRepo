@@ -106,7 +106,12 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:hint="MP-XXXX-XXXX">
+                android:accessibilityLiveRegion="polite"
+                android:hint="MP-XXXX-XXXX"
+                app:endIconContentDescription="Search"
+                app:endIconDrawable="@drawable/ic_search"
+                app:endIconMode="custom"
+                app:endIconTint="@color/accent_primary">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/et_code"

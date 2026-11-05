@@ -105,12 +105,14 @@ class AuthRepository(
             displayName = newName
         }
         user.updateProfile(profileUpdates).await()
-        firestore.collection("users").document(user.uid).update("displayName", newName).await()
-        try {
-            firestore.collection("publicProfiles").document(user.uid).update("displayName", newName).await()
-        } catch (e: Exception) {
-            // Ignore if public profile not created yet
-        }
+
+        val batch = firestore.batch()
+        val userRef = firestore.collection("users").document(user.uid)
+        val publicRef = firestore.collection("publicProfiles").document(user.uid)
+
+        batch.set(userRef, mapOf("displayName" to newName), SetOptions.merge())
+        batch.set(publicRef, mapOf("uid" to user.uid, "displayName" to newName), SetOptions.merge())
+        batch.commit().await()
     }
 
     /**
@@ -140,6 +142,15 @@ class AuthRepository(
         firestore.collection("publicProfiles").document(user.uid).set(updates, SetOptions.merge()).await()
     }
 
+    suspend fun updateUserProfileFields(uid: String, updates: Map<String, Any>) {
+        try {
+            firestore.collection("users").document(uid).set(updates, SetOptions.merge()).await()
+            firestore.collection("publicProfiles").document(uid).set(updates, SetOptions.merge()).await()
+        } catch (e: Exception) {
+            android.util.Log.e("AuthRepository", "Error updating profile fields for $uid: ${e.message}", e)
+        }
+    }
+
     /**
      * Observes real-time profile updates for a specific user ID from Firestore.
      */
@@ -163,115 +174,75 @@ class AuthRepository(
         awaitClose { subscription.remove() }
     }
 
-    /**
-     * Ensures that corresponding private and public Firestore documents exist for the authenticated user.
-     * Backfills public profile and friendCodes mapping document from private profile if missing.
-     */
     suspend fun syncUserProfile(user: FirebaseUser, preferredDisplayName: String? = null) {
         val uid = user.uid
         try {
-            android.util.Log.d("AuthRepository", "Starting profile sync for UID: $uid")
             val userDocRef = firestore.collection("users").document(uid)
             val publicDocRef = firestore.collection("publicProfiles").document(uid)
             val userDoc = userDocRef.get().await()
-            
-            var profile = if (!userDoc.exists()) {
-                android.util.Log.i("AuthRepository", "Creating new Firestore private profile for UID: $uid")
-                val friendCode = createUniqueFriendCodeDoc(uid)
+
+            var friendCode = userDoc.getString("friendCode")
+            if (friendCode.isNullOrBlank()) {
+                friendCode = generateNewFriendCode()
+            }
+            val canonicalCode = when (val res = com.example.motionpulse.util.FriendCodeUtil.normalize(friendCode)) {
+                is com.example.motionpulse.util.FriendCodeResult.Valid -> res.canonicalCode
+                is com.example.motionpulse.util.FriendCodeResult.InvalidFormat -> generateNewFriendCode()
+            }
+
+            if (!userDoc.exists()) {
                 val newProfile = UserProfileEntity(
                     uid = uid,
                     displayName = preferredDisplayName ?: user.displayName ?: "User",
                     email = user.email ?: "",
                     avatarUrl = user.photoUrl?.toString(),
-                    friendCode = friendCode,
+                    friendCode = canonicalCode,
                     totalAuraXp = 0,
                     currentLevel = 1,
                     createdAt = Instant.now()
                 )
                 userDocRef.set(newProfile).await()
-                newProfile
             } else {
-                userDoc.toObject(UserProfileEntity::class.java)
+                userDocRef.update("friendCode", canonicalCode).await()
             }
 
-            if (profile != null) {
-                // Ensure friendCodes/{code} document exists for legacy or existing code
-                val validCode = ensureFriendCodeDocExists(uid, profile.friendCode)
-                if (validCode != profile.friendCode) {
-                    profile = profile.copy(friendCode = validCode)
-                    userDocRef.update("friendCode", validCode).await()
-                }
-
-                // Sync / backfill public profile
+            val fcRef = firestore.collection("friendCodes").document(canonicalCode)
+            val fcSnap = fcRef.get().await()
+            if (!fcSnap.exists()) {
+                val batch = firestore.batch()
+                batch.set(fcRef, mapOf("uid" to uid))
                 val publicProfile = PublicProfileEntity(
-                    uid = profile.uid,
-                    displayName = profile.displayName,
-                    avatarUrl = profile.avatarUrl,
-                    totalAuraXp = profile.totalAuraXp,
-                    currentLevel = profile.currentLevel,
-                    currentStreak = profile.currentStreak,
-                    friendCode = profile.friendCode,
-                    recentXp = profile.recentXp
+                    uid = uid,
+                    displayName = user.displayName ?: "User",
+                    avatarUrl = user.photoUrl?.toString(),
+                    totalAuraXp = 0,
+                    currentLevel = 1,
+                    currentStreak = 0,
+                    recentXp = emptyMap()
                 )
-                publicDocRef.set(publicProfile, SetOptions.merge()).await()
+                batch.set(publicDocRef, publicProfile, SetOptions.merge())
+                batch.commit().await()
             }
         } catch (e: Exception) {
             android.util.Log.e("AuthRepository", "Failed to sync Firestore profile for $uid: ${e.message}", e)
         }
     }
 
-    suspend fun createUniqueFriendCodeDoc(uid: String): String {
-        var attempts = 0
-        while (attempts < 5) {
-            val candidateCode = generateNewFriendCode()
-            try {
-                val codeDocRef = firestore.collection("friendCodes").document(candidateCode)
-                val doc = codeDocRef.get().await()
-                if (!doc.exists()) {
-                    codeDocRef.set(mapOf("uid" to uid)).await()
-                    return candidateCode
-                }
-            } catch (e: Exception) {
-                // Collision or error, retry
-            }
-            attempts++
-        }
-        val fallback = generateNewFriendCode()
+    suspend fun resetFriendCode(uid: String, oldCode: String?): String {
+        val newCode = generateNewFriendCode()
         try {
-            firestore.collection("friendCodes").document(fallback).set(mapOf("uid" to uid)).await()
-        } catch (e: Exception) {}
-        return fallback
-    }
-
-    suspend fun ensureFriendCodeDocExists(uid: String, existingCode: String): String {
-        if (existingCode.isNotBlank()) {
-            try {
-                val codeDocRef = firestore.collection("friendCodes").document(existingCode)
-                val doc = codeDocRef.get().await()
-                if (!doc.exists()) {
-                    codeDocRef.set(mapOf("uid" to uid)).await()
-                }
-            } catch (e: Exception) {
-                // Ignore transient network errors; NEVER overwrite an existing code
-                android.util.Log.e("AuthRepository", "Error checking friendCodes/$existingCode: ${e.message}", e)
+            val batch = firestore.batch()
+            if (!oldCode.isNullOrBlank()) {
+                batch.delete(firestore.collection("friendCodes").document(oldCode))
             }
-            return existingCode
+            batch.set(firestore.collection("friendCodes").document(newCode), mapOf("uid" to uid))
+            batch.update(firestore.collection("users").document(uid), "friendCode", newCode)
+            batch.commit().await()
+            return newCode
+        } catch (e: Exception) {
+            android.util.Log.e("AuthRepository", "Error resetting friend code: ${e.message}", e)
+            return oldCode ?: ""
         }
-        return createUniqueFriendCodeDoc(uid)
-    }
-
-    suspend fun resetFriendCode(uid: String, oldCode: String): String {
-        if (oldCode.isNotBlank()) {
-            try {
-                firestore.collection("friendCodes").document(oldCode).delete().await()
-            } catch (e: Exception) {}
-        }
-        val newCode = createUniqueFriendCodeDoc(uid)
-        try {
-            firestore.collection("users").document(uid).update("friendCode", newCode).await()
-            firestore.collection("publicProfiles").document(uid).update("friendCode", newCode).await()
-        } catch (e: Exception) {}
-        return newCode
     }
 
     private fun generateNewFriendCode(): String {
@@ -279,5 +250,38 @@ class AuthRepository(
         val code1 = (1..4).map { chars.random() }.joinToString("")
         val code2 = (1..4).map { chars.random() }.joinToString("")
         return "MP-$code1-$code2"
+    }
+
+    suspend fun getLinkedProviders(): List<String> {
+        val user = firebaseAuth.currentUser ?: return emptyList()
+        user.reload().await()
+        return user.providerData.map { it.providerId }
+    }
+
+    suspend fun linkGoogle(idToken: String): FirebaseUser? {
+        val user = firebaseAuth.currentUser ?: throw IllegalStateException("Not signed in")
+        val credential = GoogleAuthProvider.getCredential(idToken, null)
+        try {
+            user.linkWithCredential(credential).await()
+            syncUserProfile(user)
+        } catch (e: Exception) {
+            if (e.message?.contains("credential-already-in-use", ignoreCase = true) == true) {
+                throw Exception("This Google account is already used by another Motion.Pulse account.")
+            }
+            throw e
+        }
+        return firebaseAuth.currentUser
+    }
+
+    suspend fun addPassword(newPassword: String) {
+        val user = firebaseAuth.currentUser ?: throw IllegalStateException("Not signed in")
+        val email = user.email ?: throw IllegalStateException("No email associated with account")
+        val credential = EmailAuthProvider.getCredential(email, newPassword)
+        user.linkWithCredential(credential).await()
+    }
+
+    suspend fun unlinkProvider(providerId: String) {
+        val user = firebaseAuth.currentUser ?: throw IllegalStateException("Not signed in")
+        user.unlink(providerId).await()
     }
 }

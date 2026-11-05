@@ -185,6 +185,7 @@ class AuthViewModel(
             is GoogleSignInResult.Success -> signInWithGoogle(result.idToken)
             is GoogleSignInResult.Cancelled -> _authState.value = AuthState.Idle
             is GoogleSignInResult.NoAccounts -> _authState.value = AuthState.Error(AuthErrorType.GOOGLE_SIGN_IN_FAILED, "No Google accounts found")
+            is GoogleSignInResult.PlayServicesUnavailable -> _authState.value = AuthState.Error(AuthErrorType.GOOGLE_SIGN_IN_FAILED, "Google sign-in isn't available on this device. Use email and password.")
             is GoogleSignInResult.Failure -> _authState.value = AuthState.Error(AuthErrorType.GOOGLE_SIGN_IN_FAILED, "Google sign-in failed")
         }
     }

@@ -35,7 +35,9 @@ class DuelsAdapter(
             val myScore = item.scores[currentUserId] ?: 0
             val opponentId = if (p1 == currentUserId) p2 else p1
             val opponentScore = item.scores[opponentId] ?: 0
-            val opponentName = friendNamesMap[opponentId] ?: "Friend"
+
+            // Fix: Fallback to "Loading..." or short ID instead of "Friend"
+            val opponentName = friendNamesMap[opponentId] ?: "Player (${opponentId.take(4)})"
 
             binding.myAvatarView.setDisplayName(myDisplayName)
             binding.tvMyName.text = myDisplayName

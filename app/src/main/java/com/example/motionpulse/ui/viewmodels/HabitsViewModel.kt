@@ -29,7 +29,7 @@ import com.example.motionpulse.data.repository.HabitRepository
 class HabitsViewModel(
     private val db: AppDatabase,
     private val userId: String,
-    context: android.content.Context,
+    private val context: android.content.Context,
     private val habitRepository: HabitRepository = HabitRepository(db),
     private val authRepository: AuthRepository = AuthRepository(),
     private val communityRepository: com.example.motionpulse.data.repository.CommunityRepository = com.example.motionpulse.data.repository.CommunityRepository()
@@ -172,18 +172,19 @@ class HabitsViewModel(
         }
     }
 
-    private val quotes = listOf(
-        "Consistency is key",
-        "Small steps lead to big results",
-        "Discipline is choosing between what you want now and what you want most",
-        "The secret of your future is hidden in your daily routine",
-        "Habits are the compound interest of self-improvement",
-        "Your rhythm defines your life",
-        "Master your habits, master your destiny"
-    )
-
     val dailyQuote: String
-        get() = quotes[LocalDate.now().dayOfYear % quotes.size]
+        get() {
+            val quotes = try {
+                context.resources.getStringArray(com.example.motionpulse.R.array.daily_quotes)
+            } catch (e: Exception) {
+                arrayOf("Consistency is key")
+            }
+            return if (quotes.isNotEmpty()) {
+                quotes[LocalDate.now().dayOfYear % quotes.size]
+            } else {
+                "Consistency is key"
+            }
+        }
 
     val userProfile: StateFlow<UserProfileEntity?> = db.userProfileDao()
         .getProfile(userId)
@@ -552,7 +553,9 @@ class HabitsViewModel(
                     )
                     
                     // Community Milestone
-                    if (profile.shareMilestonesWithFriends) {
+                    val settingsRepo = com.example.motionpulse.data.repository.SettingsRepository(context)
+                    val currentSettings = settingsRepo.current()
+                    if (currentSettings.shareMilestones) {
                         for (badgeType in newBadges) {
                             val badgeId = UUID.randomUUID().toString()
                             db.badgeDao().insertBadge(com.example.motionpulse.data.local.entity.BadgeEntity(
@@ -569,7 +572,8 @@ class HabitsViewModel(
                                 actorName = profile.displayName,
                                 actorAvatarUrl = profile.avatarUrl,
                                 eventType = com.example.motionpulse.data.local.entity.FeedEventType.STREAK_MILESTONE,
-                                habitTitle = if (profile.showHabitNamesInPosts) habit.title else null,
+                                habitTitle = if (currentSettings.showHabitNames) habit.title else null,
+                                habitName = if (currentSettings.showHabitNames) habit.title else null,
                                 streakCount = newCurrentStreak,
                                 timestamp = System.currentTimeMillis()
                             ))
@@ -583,7 +587,8 @@ class HabitsViewModel(
                                 actorName = profile.displayName,
                                 actorAvatarUrl = profile.avatarUrl,
                                 eventType = com.example.motionpulse.data.local.entity.FeedEventType.ALL_HABITS_COMPLETED,
-                                habitTitle = if (profile.showHabitNamesInPosts) habit.title else null,
+                                habitTitle = if (currentSettings.showHabitNames) habit.title else null,
+                                habitName = if (currentSettings.showHabitNames) habit.title else null,
                                 timestamp = System.currentTimeMillis()
                             ))
                         }

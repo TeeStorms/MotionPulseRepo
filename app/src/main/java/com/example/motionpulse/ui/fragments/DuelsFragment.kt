@@ -17,8 +17,6 @@ import androidx.room.Room
 import com.example.motionpulse.R
 import com.example.motionpulse.data.local.AppDatabase
 import com.example.motionpulse.data.local.entity.Duel
-import com.example.motionpulse.data.local.entity.UserProfileEntity
-import com.example.motionpulse.data.repository.PreferenceRepository
 import com.example.motionpulse.databinding.FragmentDuelsBinding
 import com.example.motionpulse.databinding.LayoutChallengeDialogBinding
 import com.example.motionpulse.domain.auth.AuthState
@@ -29,15 +27,15 @@ import com.example.motionpulse.ui.views.StateLayout
 import com.example.motionpulse.ui.viewmodels.CommunityViewModel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 
 class DuelsFragment : Fragment() {
 
     private var _binding: FragmentDuelsBinding? = null
     private val binding get() = _binding!!
 
-    private val preferenceRepository by lazy { PreferenceRepository(requireContext()) }
+    private val preferenceRepository by lazy { com.example.motionpulse.data.repository.PreferenceRepository(requireContext()) }
     private val authViewModel: AuthViewModel by activityViewModels {
         object : ViewModelProvider.Factory {
             override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
@@ -87,14 +85,10 @@ class DuelsFragment : Fragment() {
     }
 
     private fun setupDuelsContent(viewModel: CommunityViewModel, currentUserId: String) {
-        val myName = viewModel.userProfile.value?.displayName ?: "You"
-        val friendsList = (viewModel.friendsState.value as? UiState.Success)?.data ?: emptyList()
-        val friendMap = friendsList.associate { it.uid to it.displayName }
-
         duelsAdapter = DuelsAdapter(
             currentUserId = currentUserId,
-            myDisplayName = myName,
-            friendNamesMap = friendMap
+            myDisplayName = viewModel.userProfile.value?.displayName ?: "You",
+            friendNamesMap = emptyMap() // Will be populated by the combine block
         )
         binding.rvDuels.layoutManager = LinearLayoutManager(requireContext())
         binding.rvDuels.adapter = duelsAdapter
@@ -112,16 +106,36 @@ class DuelsFragment : Fragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+
+                // Combine Duel State and Friends State so the adapter updates exactly when the names are fetched
                 launch {
-                    viewModel.duelsState.collectLatest { state ->
-                        when (state) {
+                    combine(
+                        viewModel.duelsState,
+                        viewModel.friendsState,
+                        viewModel.userProfile
+                    ) { duelsState, friendsState, userProfile ->
+                        Triple(duelsState, friendsState, userProfile)
+                    }.collectLatest { (duelsState, friendsState, userProfile) ->
+
+                        // Update Adapter properties
+                        val friendsList = (friendsState as? UiState.Success)?.data ?: emptyList()
+                        val friendMap = friendsList.associate { it.uid to it.displayName }
+
+                        // Recreate adapter with the updated friendMap and name
+                        duelsAdapter = DuelsAdapter(
+                            currentUserId = currentUserId,
+                            myDisplayName = userProfile?.displayName ?: "You",
+                            friendNamesMap = friendMap
+                        )
+                        binding.rvDuels.adapter = duelsAdapter
+
+                        when (duelsState) {
                             is UiState.Loading -> binding.stateLayout.setState(StateLayout.State.LOADING)
                             is UiState.Empty -> binding.stateLayout.setState(StateLayout.State.EMPTY, "No active duels. Challenge a friend to get started!")
-                            is UiState.Error -> binding.stateLayout.setState(StateLayout.State.ERROR, state.message)
+                            is UiState.Error -> binding.stateLayout.setState(StateLayout.State.ERROR, duelsState.message)
                             is UiState.Success -> {
                                 binding.stateLayout.setState(StateLayout.State.CONTENT)
-                                // Sort: ACTIVE first (soonest end first), then COMPLETED/CANCELLED (newest first)
-                                val sorted = state.data.sortedWith(
+                                val sorted = duelsState.data.sortedWith(
                                     compareBy<Duel> { if (it.status == "ACTIVE") 0 else 1 }
                                         .thenBy { if (it.status == "ACTIVE") it.endDate else "9999-12-31" }
                                         .thenByDescending { it.startDate }
@@ -137,7 +151,7 @@ class DuelsFragment : Fragment() {
 
     private fun showChallengeDialog(viewModel: CommunityViewModel) {
         val dialogBinding = LayoutChallengeDialogBinding.inflate(layoutInflater)
-        
+
         val friendsState = viewModel.friendsState.value
         val friends = (friendsState as? UiState.Success)?.data ?: emptyList()
 

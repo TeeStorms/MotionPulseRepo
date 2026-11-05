@@ -93,18 +93,19 @@ service cloud.firestore {
       }
     }
 
-    // Public User Profiles (Any authenticated user can get by UID; owner writes)
     match /publicProfiles/{userId} {
       allow get: if request.auth != null;
-      allow list: if false;
+      allow list: if request.auth != null && request.query.limit <= 1;
       allow write: if request.auth != null
                    && request.auth.uid == userId
-                   && (!('displayName' in request.resource.data) || (request.resource.data.displayName is string && request.resource.data.displayName.size() >= 2 && request.resource.data.displayName.size() <= 30));
+                   && (!('displayName' in request.resource.data) || (request.resource.data.displayName is string && request.resource.data.displayName.size() >= 2 && request.resource.data.displayName.size() <= 30))
+                   && (!('friendCode' in request.resource.data) || (request.resource.data.friendCode is string && request.resource.data.friendCode.matches('^MP-[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}$')));
     }
 
     // Friend Requests
     match /friendRequests/{requestId} {
-      allow read: if request.auth != null && ('participants' in resource.data) && (request.auth.uid in resource.data.participants);
+      allow get: if request.auth != null;
+      allow list: if request.auth != null && ('participants' in resource.data) && (request.auth.uid in resource.data.participants);
 
       allow create: if request.auth != null
                     && request.resource.data.requesterUid == request.auth.uid
@@ -232,9 +233,22 @@ service cloud.firestore {
       allow delete: if request.auth != null && ('participants' in resource.data) && (request.auth.uid in resource.data.participants);
     }
 
-    // Friend Codes Mapping Documents (Lookups handled exclusively by Cloud Functions API)
+    // Friend Codes Mapping Documents (Lookups)
     match /friendCodes/{code} {
-      allow read, write: if false;
+      // single document get for any signed-in user; listing is never allowed
+      allow get: if request.auth != null;
+      allow list: if false;
+
+      // a user may create the mapping only for THEIR OWN code, and only if it does not exist yet
+      // (create on an existing document counts as an update, which is denied, so nobody can overwrite)
+      allow create: if request.auth != null
+        && code.matches('^MP-[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}$')
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid
+        && getAfter(/databases/$(database)/documents/publicProfiles/$(request.auth.uid)).data.friendCode == code;
+
+      allow update: if false;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
     }
 
     // Default-deny fallback rule for everything else

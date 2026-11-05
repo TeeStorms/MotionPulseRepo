@@ -33,9 +33,9 @@ This document tracks the feature parity audit for migrating Motion.Pulse from Je
 ## 3. Screen Parity Checklists
 
 ### Intro
-- [ ] ExoPlayer video playback (LandingFragment:onViewCreated)
-- [ ] Network connectivity broadcast/callback listener (LandingFragment:setupConnectivity)
-- [ ] Session validation & auth state routing (LandingFragment:authState collector)
+- [x] ExoPlayer video playback (LandingFragment:onViewCreated)
+- [x] Network connectivity broadcast/callback listener (LandingFragment:setupConnectivity)
+- [x] Session validation & auth state routing (LandingFragment:authState collector)
 
 ### Login
 - [x] Email & password validation (LoginFragment:btnLogin)
@@ -58,91 +58,91 @@ This document tracks the feature parity audit for migrating Motion.Pulse from Je
 - [x] Logout / Back to Login
 
 ### Home (Dashboard)
-- [ ] Greeting & user display name in DropletHeaderView (DashboardFragment:onViewCreated)
-- [ ] Today's mood pill badge in header
-- [ ] Local mode sync failure warning banner
-- [ ] Motivation of the day quote & reflection note card (DashboardFragment:setupHabitsRecyclerView)
-- [ ] Today's habits RecyclerView (HabitsAdapter, toggle completion, navigate to detail)
-- [ ] Pull-to-refresh list refresh handler (SwipeRefreshLayout)
+- [x] Greeting & user display name in DropletHeaderView (DashboardFragment:onViewCreated)
+- [x] Today's mood pill badge in header
+- [x] Local mode sync failure warning banner
+- [x] Motivation of the day quote & reflection note card (DashboardFragment:setupHabitsRecyclerView)
+- [x] Today's habits RecyclerView (HabitsAdapter, toggle completion, navigate to detail)
+- [x] Pull-to-refresh list refresh handler (SwipeRefreshLayout)
 
 ### Mood
-- [ ] Mood level selector bars (Rising bars selector)
-- [ ] Mood factors selection chips
-- [ ] Reflection note text input
-- [ ] Save rhythm button (MoodViewModel:logMood)
-- [ ] Toast feedback on save success
+- [x] Mood level selector bars (Rising bars selector)
+- [x] Mood factors selection chips
+- [x] Reflection note text input
+- [x] Save rhythm button (MoodViewModel:logMood)
+- [x] Toast feedback on save success
 
 ### Habits
-- [ ] Habits list RecyclerView with search filtering (HabitsFragment:setupHabitsRecyclerView)
-- [ ] Category filter tags (All, Mind & Focus, Fitness and Health, Daily Routine)
-- [ ] Swipe-to-dismiss actions (Edit / Add)
-- [ ] Habit reordering (Move Up / Move Down)
-- [ ] Archived habits section & unarchive action
-- [ ] Floating Action Button (FAB) for adding new habit
+- [x] Habits list RecyclerView with search filtering (HabitsFragment:setupHabitsRecyclerView)
+- [x] Category filter tags (All, Mind & Focus, Fitness and Health, Daily Routine)
+- [x] Swipe-to-dismiss actions (Edit / Add)
+- [x] Habit reordering (Move Up / Move Down)
+- [x] Archived habits section & unarchive action
+- [x] Floating Action Button (FAB) for adding new habit
 
 ### Add/Edit habit
-- [ ] AddHabitOverlay bottom sheet / dialog
-- [ ] Habit title, description, category, frequency configuration
-- [ ] Save / Update habit validation & database persistence
+- [x] AddHabitOverlay bottom sheet / dialog
+- [x] Habit title, description, category, frequency configuration
+- [x] Save / Update habit validation & database persistence
 
 ### Habit detail
-- [ ] Habit ID & detailed completion history
-- [ ] Back button & system back press handling
+- [x] Habit ID & detailed completion history
+- [x] Back button & system back press handling
 
 ### Community Feed
-- [ ] Activity feed entries RecyclerView
-- [ ] Reaction buttons (likes/emojis)
-- [ ] Nudge friend action
-- [ ] Pull-to-refresh & empty/loading/error states
+- [x] Activity feed entries RecyclerView
+- [x] Reaction buttons (likes/emojis)
+- [x] Nudge friend action
+- [x] Pull-to-refresh & empty/loading/error states
 
 ### Leaderboard
-- [ ] Leaderboard ranking list
-- [ ] Metric selector chips (Streak, Completed, etc.)
-- [ ] Challenge friend action
+- [x] Leaderboard ranking list
+- [x] Metric selector chips (Streak, Completed, etc.)
+- [x] Challenge friend action
 
 ### Duels
-- [ ] Active & past 1-on-1 habit duels list
-- [ ] Duel progress tracking & score increment
-- [ ] Resolve duel action
+- [x] Active & past 1-on-1 habit duels list
+- [x] Duel progress tracking & score increment
+- [x] Resolve duel action
 
 ### Manage Friends
-- [ ] Friends list RecyclerView
-- [ ] Unfriend, mute, unmute, block actions
+- [x] Friends list RecyclerView
+- [x] Unfriend, mute, unmute, block actions
 
 ### Add Friend
-- [ ] Friend code display & clipboard copy
-- [ ] Search user by friend code
-- [ ] Send / cancel friend request actions
+- [x] Friend code display & clipboard copy
+- [x] Search user by friend code
+- [x] Send / cancel friend request actions
 
 ### Notifications
-- [ ] Notifications tray / list
-- [ ] Mark as read & delete actions
-- [ ] Friend request accept / decline buttons
+- [x] Notifications tray / list
+- [x] Mark as read & delete actions
+- [x] Friend request accept / decline buttons
 
 ### Stats
-- [ ] Weekly summary stat boxes (Done Today, Current Streak, Total Completed, Weekly Percent)
-- [ ] Mood & Habits weekly correlation graph card
-- [ ] Correlation insights & best day card
+- [x] Weekly summary stat boxes (Done Today, Current Streak, Total Completed, Weekly Percent)
+- [x] Mood & Habits weekly correlation graph card
+- [x] Correlation insights & best day card
 
 ### Profile
-- [ ] User avatar with initials (`UserAvatarView`)
-- [ ] Member since date formatting
-- [ ] Stats cards grid
-- [ ] See all badges navigation
-- [ ] Change password / language dialogs
-- [ ] Sign out / logout confirmation dialog
-- [ ] Delete account dialog
+- [x] User avatar with initials (`UserAvatarView`)
+- [x] Member since date formatting
+- [x] Stats cards grid
+- [x] See all badges navigation
+- [x] Change password / language dialogs
+- [x] Sign out / logout confirmation dialog
+- [x] Delete account dialog
 
 ### Profile dialogs
-- [ ] Logout confirmation dialog
-- [ ] Delete account confirmation dialog
-- [ ] Language selection dialog
-- [ ] Password change dialog
+- [x] Logout confirmation dialog
+- [x] Delete account confirmation dialog
+- [x] Language selection dialog
+- [x] Password change dialog
 
 ### Badges gallery
-- [ ] Unlocked & locked badges grid RecyclerView (`BadgesGalleryFragment`)
-- [ ] Total badges count display
-- [ ] Back navigation
+- [x] Unlocked & locked badges grid RecyclerView (`BadgesGalleryFragment`)
+- [x] Total badges count display
+- [x] Back navigation
 
 ### Bottom nav
 - [ ] 6 equal-weight tabs (`MotionPulseBottomNav`: Home, Mood, Habits, Community, Stats, Profile)

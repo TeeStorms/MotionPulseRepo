@@ -1,0 +1,11 @@
+- [/] Clean up existing partial progress logic
+    - [ ] Remove `PARTIAL` from `HabitCompletionEntity.kt`
+    - [ ] Remove `PARTIAL` logic from `HabitScoreCalculator.kt`
+    - [ ] Delete `QuickLogBottomSheet.kt` and `HabitGoalStepper.kt`
+- [ ] Update database version to 6 in `AppDatabase.kt`
+- [ ] Implement frictionless completion in `HabitsViewModel.kt` and `StatsViewModel.kt`
+- [ ] Implement un-complete confirmation logic and reversal in ViewModels
+- [ ] Redesign `HabitCard.kt` with binary dot and `AlertDialog`
+- [ ] Update `HabitConsistencyCard.kt` and `DashboardScreen.kt`
+- [ ] Add haptic feedback to all completion actions
+- [ ] Verify build and behavior

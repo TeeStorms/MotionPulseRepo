@@ -66,7 +66,7 @@ class StatsFragment : Fragment() {
                         if (uid.isNotEmpty()) {
                             val statsViewModel = ViewModelProvider(
                                 this@StatsFragment,
-                                StatsViewModel.Factory(db, uid)
+                                StatsViewModel.Factory(db, uid, requireContext())
                             )[StatsViewModel::class.java]
 
                             setupStatsContent(statsViewModel)
@@ -82,8 +82,24 @@ class StatsFragment : Fragment() {
             binding.swipeRefresh.isRefreshing = false
         }
 
+        binding.btnPrevWeek.setOnClickListener { viewModel.previousWeek() }
+        binding.btnNextWeek.setOnClickListener { viewModel.nextWeek() }
+
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    viewModel.weekLabel.collectLatest { label ->
+                        binding.tvWeekLabel.text = label
+                    }
+                }
+
+                launch {
+                    viewModel.weekOffset.collectLatest { offset ->
+                        binding.btnNextWeek.isEnabled = offset < 0
+                        binding.btnNextWeek.alpha = if (offset < 0) 1.0f else 0.4f
+                    }
+                }
+
                 launch {
                     viewModel.todayMood.collectLatest { mood ->
                         if (mood != null) {
@@ -107,18 +123,11 @@ class StatsFragment : Fragment() {
 
                 launch {
                     viewModel.summaryStats.collectLatest { stats ->
-                        binding.tvStatDoneToday.text = "${stats.doneToday}/${stats.totalHabits}"
+                        binding.tvStatDoneToday.text = com.example.motionpulse.domain.stats.StatsCalculations.formatDoneToday(stats.doneToday, stats.totalHabits)
                         binding.tvStatCurrentStreak.text = "${stats.currentStreak}d"
                         binding.tvStatTotalCompleted.text = stats.totalCompleted.toString()
                         binding.tvStatWeeklyPercent.text = "${stats.weeklyPercent}%"
-
-                        val trend = stats.weeklyTrend
-                        if (trend != null) {
-                            val sign = if (trend >= 0) "+$trend%" else "$trend%"
-                            binding.tvStatWeeklyTrend.text = "$sign vs last week"
-                        } else {
-                            binding.tvStatWeeklyTrend.text = "vs last week"
-                        }
+                        binding.tvStatWeeklyTrend.text = "${stats.weeklyTrendStr} vs last week"
                     }
                 }
 

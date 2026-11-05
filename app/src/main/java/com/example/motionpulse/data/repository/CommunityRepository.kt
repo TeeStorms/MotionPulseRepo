@@ -6,6 +6,7 @@ import com.example.motionpulse.data.local.entity.Challenge
 import com.example.motionpulse.data.local.entity.CommunityNotification
 import com.example.motionpulse.data.local.entity.Duel
 import com.example.motionpulse.data.local.entity.FeedEventType
+import com.example.motionpulse.data.local.AppDatabase
 import com.example.motionpulse.data.local.entity.UserProfileEntity
 import com.example.motionpulse.domain.models.ErrorKind
 import com.example.motionpulse.domain.models.UiState
@@ -13,6 +14,11 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.Query
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -503,23 +509,8 @@ class CommunityRepository(
         return snapshot.documents.mapNotNull { it.toObject(Duel::class.java)?.copy(id = it.id) }
     }
 
-    suspend fun findUserByFriendCode(rawCode: String): UserProfileEntity? {
-        val clean = rawCode.uppercase().trim().replace(" ", "").replace("-", "")
-        val body = if (clean.startsWith("MP")) clean.removePrefix("MP") else clean
-        
-        val formattedCode = when (body.length) {
-            6 -> "MP-$body"
-            8 -> "MP-${body.take(4)}-${body.drop(4)}"
-            else -> "MP-$body"
-        }
-
-        // Single document lookup against friendCodes/{code}
-        val codeDoc = firestore.collection("friendCodes").document(formattedCode).get().await()
-        if (!codeDoc.exists()) return null
-
-        val targetUid = codeDoc.getString("uid") ?: return null
-        val publicProfileDoc = firestore.collection("publicProfiles").document(targetUid).get().await()
-        return publicProfileDoc.toObject(UserProfileEntity::class.java)
+    suspend fun findUserByFriendCode(rawCode: String, myUid: String, myCode: String?, context: android.content.Context): com.example.motionpulse.domain.models.FriendLookupResult {
+        return FriendCodeDataSource(context).lookup(rawCode, myUid, myCode)
     }
 
     fun getFriendRequests(userId: String): Flow<UiState<List<com.example.motionpulse.data.local.entity.FriendEntity>>> = callbackFlow {
@@ -563,45 +554,60 @@ class CommunityRepository(
     }
 
     suspend fun sendFriendRequest(senderId: String, senderName: String, recipientId: String) {
-        if (senderId == recipientId) return
+        if (senderId == recipientId) {
+            throw IllegalArgumentException("That's your own code.")
+        }
 
-        // Search for existing request in either direction
-        val querySnapshot = firestore.collection("friendRequests")
+        val myRequests = firestore.collection("friendRequests")
             .whereArrayContains("participants", senderId)
             .get().await()
 
-        val existing = querySnapshot.documents.find { doc ->
-            val parts = doc.get("participants") as? List<*> ?: emptyList<Any>()
-            parts.contains(recipientId)
+        val pendingSentCount = myRequests.documents.count { doc ->
+            doc.getString("status") == "PENDING" && doc.getString("requesterUid") == senderId
+        }
+        if (pendingSentCount >= 20) {
+            throw IllegalStateException("You have too many pending sent requests (max 20).")
         }
 
-        if (existing != null) {
-            val status = existing.getString("status")
-            val requester = existing.getString("requesterUid")
-            
-            if (status == "ACCEPTED") {
-                return // Already friends
-            }
-            if (status == "PENDING") {
-                if (requester == recipientId) {
-                    // Simultaneous intent: Auto-accept
-                    respondToFriendRequest(existing.id, senderId, senderName, recipientId, true)
-                    return
-                } else {
-                    return // Already sent PENDING request
-                }
-            }
-            if (status == "DECLINED") {
-                // Check 24-hour cooldown
-                val respondedAtTimestamp = existing.getTimestamp("respondedAt")?.toDate()?.time ?: 0L
-                val twentyFourHours = 24 * 60 * 60 * 1000L
-                if (System.currentTimeMillis() - respondedAtTimestamp < twentyFourHours) {
-                    throw IllegalStateException("Recent request was declined. Please wait 24 hours before trying again.")
-                }
-            }
+        val friendCount = myRequests.documents.count { doc ->
+            doc.getString("status") == "ACCEPTED"
+        }
+        if (friendCount >= 100) {
+            throw IllegalStateException("You have reached the maximum limit of 100 friends.")
         }
 
         val requestId = if (senderId < recipientId) "${senderId}_${recipientId}" else "${recipientId}_${senderId}"
+        val existingDoc = firestore.collection("friendRequests").document(requestId).get().await()
+
+        if (existingDoc.exists()) {
+            val status = existingDoc.getString("status")
+            val requester = existingDoc.getString("requesterUid")
+
+            if (status == "ACCEPTED") {
+                throw IllegalStateException("You're already friends with this user.")
+            }
+            if (status == "PENDING") {
+                if (requester == recipientId) {
+                    acceptRequest(requestId, senderId, senderName)
+                    return
+                } else {
+                    throw IllegalStateException("Request already sent.")
+                }
+            }
+            if (status == "DECLINED") {
+                val respondedAtMs = existingDoc.getTimestamp("respondedAt")?.toDate()?.time ?: existingDoc.getLong("createdAt") ?: 0L
+                val sevenDaysMs = 7L * 24 * 60 * 60 * 1000L
+                val now = System.currentTimeMillis()
+                if (now - respondedAtMs < sevenDaysMs) {
+                    val availableDate = java.time.Instant.ofEpochMilli(respondedAtMs + sevenDaysMs)
+                        .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                    throw IllegalStateException("You can send another request on $availableDate.")
+                } else {
+                    existingDoc.reference.delete().await()
+                }
+            }
+        }
+
         val request = mapOf(
             "requesterUid" to senderId,
             "recipientUid" to recipientId,
@@ -610,21 +616,27 @@ class CommunityRepository(
             "createdAt" to FieldValue.serverTimestamp(),
             "respondedAt" to null
         )
-        
-        firestore.collection("friendRequests").document(requestId).set(request).await()
-        
-        // Notify recipient
-        val notification = CommunityNotification(
-            id = UUID.randomUUID().toString(),
-            senderId = senderId,
-            senderName = senderName,
-            type = "FRIEND_REQUEST",
-            timestamp = System.currentTimeMillis(),
-            message = "$senderName sent you a friend request!"
-        )
-        firestore.collection("users").document(recipientId)
-            .collection("notifications").document(notification.id)
-            .set(notification).await()
+
+        try {
+            firestore.collection("friendRequests").document(requestId).set(request).await()
+
+            val notification = CommunityNotification(
+                id = UUID.randomUUID().toString(),
+                senderId = senderId,
+                senderName = senderName,
+                type = "FRIEND_REQUEST",
+                timestamp = System.currentTimeMillis(),
+                message = "$senderName sent you a friend request!"
+            )
+            firestore.collection("users").document(recipientId)
+                .collection("notifications").document(notification.id)
+                .set(notification).await()
+        } catch (e: Exception) {
+            if (e.message?.contains("PERMISSION_DENIED", ignoreCase = true) == true) {
+                throw Exception("Couldn't send the request.")
+            }
+            throw e
+        }
     }
 
     suspend fun cancelFriendRequest(requestId: String) {
@@ -632,26 +644,70 @@ class CommunityRepository(
     }
 
     suspend fun respondToFriendRequest(requestId: String, userId: String, userName: String, otherUserId: String, accept: Boolean) {
-        val status = if (accept) "ACCEPTED" else "DECLINED"
-        firestore.collection("friendRequests").document(requestId)
-            .update(
-                "status", status,
-                "respondedAt", FieldValue.serverTimestamp()
-            ).await()
-
         if (accept) {
-            val notification = CommunityNotification(
-                id = UUID.randomUUID().toString(),
-                senderId = userId,
-                senderName = userName,
-                type = "FRIEND_ACCEPTED",
-                timestamp = System.currentTimeMillis(),
-                message = "$userName accepted your friend request!"
-            )
-            firestore.collection("users").document(otherUserId)
-                .collection("notifications").document(notification.id)
-                .set(notification).await()
+            acceptRequest(requestId, userId, userName)
+        } else {
+            declineRequest(requestId, userId)
         }
+    }
+
+    suspend fun acceptRequest(docId: String, recipientUid: String, recipientName: String) {
+        val reqRef = firestore.collection("friendRequests").document(docId)
+        val notifId = "friendaccepted_$docId"
+
+        firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(reqRef)
+            if (!snapshot.exists()) {
+                throw IllegalStateException("This request is no longer available")
+            }
+            val status = snapshot.getString("status")
+            val recipient = snapshot.getString("recipientUid")
+            val requester = snapshot.getString("requesterUid")
+
+            if (status != "PENDING" || recipient != recipientUid) {
+                throw IllegalStateException("This request is no longer available")
+            }
+
+            transaction.update(reqRef, mapOf(
+                "status" to "ACCEPTED",
+                "respondedAt" to FieldValue.serverTimestamp()
+            ))
+
+            if (requester != null) {
+                val notifRef = firestore.collection("users").document(requester)
+                    .collection("notifications").document(notifId)
+                val notification = CommunityNotification(
+                    id = notifId,
+                    senderId = recipientUid,
+                    senderName = recipientName,
+                    type = "FRIEND_ACCEPTED",
+                    timestamp = System.currentTimeMillis(),
+                    message = "$recipientName accepted your friend request!"
+                )
+                transaction.set(notifRef, notification)
+            }
+        }.await()
+    }
+
+    suspend fun declineRequest(docId: String, recipientUid: String) {
+        val reqRef = firestore.collection("friendRequests").document(docId)
+        firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(reqRef)
+            if (!snapshot.exists()) {
+                throw IllegalStateException("This request is no longer available")
+            }
+            val status = snapshot.getString("status")
+            val recipient = snapshot.getString("recipientUid")
+
+            if (status != "PENDING" || recipient != recipientUid) {
+                throw IllegalStateException("This request is no longer available")
+            }
+
+            transaction.update(reqRef, mapOf(
+                "status" to "DECLINED",
+                "respondedAt" to FieldValue.serverTimestamp()
+            ))
+        }.await()
     }
 
     suspend fun unfriendAtomic(userId: String, otherUserId: String, db: com.example.motionpulse.data.local.AppDatabase? = null) {
@@ -720,24 +776,74 @@ class CommunityRepository(
             return@callbackFlow
         }
         trySend(UiState.Loading)
-        val subscription = firestore.collection("publicProfiles")
-            .whereIn("uid", friendIds)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    logFirestoreError("publicProfiles", "getFriendsProfiles (whereIn uid [${friendIds.joinToString()}])", error)
-                    val kind = mapFirestoreError(error)
-                    trySend(UiState.Error(kind, error.message ?: "Failed to load friend profiles", error))
-                    return@addSnapshotListener
-                }
-                if (snapshot != null) {
-                    val profiles = snapshot.documents.mapNotNull { it.toObject(UserProfileEntity::class.java) }
-                    if (profiles.isEmpty()) {
-                        trySend(UiState.Empty)
-                    } else {
-                        trySend(UiState.Success(profiles))
+
+        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)
+        val job = scope.launch {
+            try {
+                val deferreds = friendIds.map { uid ->
+                    async {
+                        try {
+                            val doc = firestore.collection("publicProfiles").document(uid).get().await()
+                            doc.toObject(UserProfileEntity::class.java)
+                        } catch (e: Exception) {
+                            UserProfileEntity(uid = uid, displayName = "Unknown user")
+                        }
                     }
                 }
+                val profiles = deferreds.awaitAll().filterNotNull()
+                if (profiles.isEmpty()) {
+                    trySend(UiState.Empty)
+                } else {
+                    trySend(UiState.Success(profiles))
+                }
+            } catch (e: Exception) {
+                val kind = if (e is FirebaseFirestoreException) mapFirestoreError(e) else ErrorKind.UNKNOWN
+                trySend(UiState.Error(kind, e.message ?: "Failed to load friend profiles", e))
             }
-        awaitClose { subscription.remove() }
+        }
+
+        awaitClose { job.cancel() }
+    }
+
+    suspend fun deleteActorFeedEntriesInBatches(actorId: String) {
+        if (actorId.isEmpty()) return
+        try {
+            val snapshot = firestore.collection("activityFeed")
+                .whereEqualTo("actorId", actorId)
+                .limit(400)
+                .get().await()
+
+            if (!snapshot.isEmpty) {
+                val batch = firestore.batch()
+                snapshot.documents.forEach { doc ->
+                    batch.delete(doc.reference)
+                }
+                batch.commit().await()
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("CommunityRepository", "Error deleting actor feed entries for $actorId: ${e.message}", e)
+            throw e
+        }
+    }
+
+    suspend fun removeHabitNameFromActorFeedEntries(actorId: String) {
+        if (actorId.isEmpty()) return
+        try {
+            val snapshot = firestore.collection("activityFeed")
+                .whereEqualTo("actorId", actorId)
+                .limit(400)
+                .get().await()
+
+            if (!snapshot.isEmpty) {
+                val batch = firestore.batch()
+                snapshot.documents.forEach { doc ->
+                    batch.update(doc.reference, "habitName", com.google.firebase.firestore.FieldValue.delete())
+                }
+                batch.commit().await()
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("CommunityRepository", "Error removing habit name from feed entries for $actorId: ${e.message}", e)
+            throw e
+        }
     }
 }

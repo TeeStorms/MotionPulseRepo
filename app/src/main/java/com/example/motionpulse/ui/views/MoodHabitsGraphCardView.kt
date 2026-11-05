@@ -8,6 +8,8 @@ import android.graphics.Path
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
+import androidx.core.content.ContextCompat
+import com.example.motionpulse.R
 import com.example.motionpulse.domain.stats.WeeklyCorrelationData
 
 class MoodHabitsGraphCardView @JvmOverloads constructor(
@@ -19,50 +21,50 @@ class MoodHabitsGraphCardView @JvmOverloads constructor(
     private var correlationData: WeeklyCorrelationData = WeeklyCorrelationData()
 
     private val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#FF2A85")
+        color = ContextCompat.getColor(context, R.color.mood_line)
         style = Paint.Style.STROKE
         strokeWidth = dpToPx(3f)
     }
 
     private val hollowPointPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#FF2A85")
+        color = ContextCompat.getColor(context, R.color.mood_line)
         style = Paint.Style.STROKE
         strokeWidth = dpToPx(2.5f)
     }
 
     private val pointFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#1C0620")
+        color = ContextCompat.getColor(context, R.color.card_background)
         style = Paint.Style.FILL
     }
 
     private val moodLegendDotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#4FC3F7")
+        color = ContextCompat.getColor(context, R.color.mood_line)
         style = Paint.Style.FILL
     }
 
     private val habitDonePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#FF2A85")
+        color = ContextCompat.getColor(context, R.color.habit_done)
         style = Paint.Style.FILL
     }
 
     private val habitMissedPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#2C1236")
+        color = ContextCompat.getColor(context, R.color.habit_missed)
         style = Paint.Style.FILL
     }
 
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#D1C7D7")
+        color = ContextCompat.getColor(context, R.color.text_secondary)
         textAlign = Paint.Align.CENTER
         textSize = dpToPx(12f)
     }
 
     private val legendTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#D1C7D7")
+        color = ContextCompat.getColor(context, R.color.text_secondary)
         textSize = dpToPx(12f)
     }
 
     private val emptyTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#D1C7D7")
+        color = ContextCompat.getColor(context, R.color.text_secondary)
         textAlign = Paint.Align.CENTER
         textSize = dpToPx(14f)
     }
@@ -73,6 +75,22 @@ class MoodHabitsGraphCardView @JvmOverloads constructor(
 
     fun setData(data: WeeklyCorrelationData) {
         this.correlationData = data
+
+        val sb = StringBuilder("Weekly Correlation Chart: ")
+        if (data.days.none { it.moodLevel != null }) {
+            sb.append("No mood logged this week.")
+        } else {
+            val dayNames = arrayOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+            data.days.forEachIndexed { i, day ->
+                val dayName = dayNames.getOrElse(i) { "Day ${i + 1}" }
+                val moodStr = day.moodLevel?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "none"
+                val totalHabits = day.habitCompletions.size
+                val done = day.habitCompletions.count { it }
+                sb.append("$dayName: mood $moodStr, $done of $totalHabits habits done. ")
+            }
+        }
+        contentDescription = sb.toString()
+
         invalidate()
     }
 

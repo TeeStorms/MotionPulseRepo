@@ -6,11 +6,12 @@ import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
+import com.google.android.gms.common.ConnectionResult
+import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GoogleAuthProvider
-import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.CancellationException
 import java.security.MessageDigest
 import java.util.UUID
 
@@ -18,6 +19,7 @@ sealed class GoogleSignInResult {
     data class Success(val idToken: String) : GoogleSignInResult()
     object Cancelled : GoogleSignInResult()
     object NoAccounts : GoogleSignInResult()
+    object PlayServicesUnavailable : GoogleSignInResult()
     data class Failure(val errorResId: Int) : GoogleSignInResult()
 }
 
@@ -31,10 +33,22 @@ class GoogleAuthUiClient(
     private val credentialManager = CredentialManager.create(context)
 
     suspend fun signIn(webClientId: String, nonce: String): GoogleSignInResult {
+        // Check Google Play Services availability
+        val playServicesAvailable = try {
+            GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(context) == ConnectionResult.SUCCESS
+        } catch (e: Exception) {
+            false
+        }
+
+        if (!playServicesAvailable) {
+            android.util.Log.e("GoogleAuth", "Google Play Services is not available or outdated.")
+            return GoogleSignInResult.PlayServicesUnavailable
+        }
+
         val googleIdOption = GetGoogleIdOption.Builder()
             .setFilterByAuthorizedAccounts(false)
             .setServerClientId(webClientId)
-            .setAutoSelectEnabled(true)
+            .setAutoSelectEnabled(false)
             .setNonce(nonce)
             .build()
 
@@ -56,6 +70,7 @@ class GoogleAuthUiClient(
                     val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
                     GoogleSignInResult.Success(googleIdTokenCredential.idToken)
                 } catch (e: Exception) {
+                    if (e is CancellationException) throw e
                     android.util.Log.e("GoogleAuth", "Failed to parse Google ID Token", e)
                     GoogleSignInResult.Failure(com.example.motionpulse.R.string.error_google_generic)
                 }
@@ -73,6 +88,7 @@ class GoogleAuthUiClient(
             android.util.Log.e("GoogleAuth", "Credential error: ${e.message}", e)
             GoogleSignInResult.Failure(com.example.motionpulse.R.string.error_google_config)
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             android.util.Log.e("GoogleAuth", "Unknown sign-in error", e)
             GoogleSignInResult.Failure(com.example.motionpulse.R.string.error_google_generic)
         }

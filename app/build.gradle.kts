@@ -32,6 +32,12 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        buildConfig = true
+    }
+    lint {
+        error.add("MissingTranslation")
+        error.add("ExtraTranslation")
+        abortOnError = true
     }
 }
 

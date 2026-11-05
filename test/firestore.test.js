@@ -655,12 +655,18 @@ describe("Motion.Pulse Firestore Security Rules", () => {
     await assertFails(bobDb.collection("publicProfiles").doc("alice").set({ displayName: "Bob Fake Alice" }));
   });
 
-  test("friendCodes: direct client get, list, create, update, delete are denied for all users", async () => {
+  test("friendCodes: get succeeds for signed-in user, list, create, update, delete are denied", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const adminDb = context.firestore();
+      await adminDb.collection("friendCodes").doc("MP-ABCD-EFGH").set({ uid: "alice" });
+      await adminDb.terminate();
+    });
+
     const aliceDb = testEnv.authenticatedContext("alice").firestore();
     const bobDb = testEnv.authenticatedContext("bob").firestore();
 
-    await assertFails(aliceDb.collection("friendCodes").doc("MP-ABCD-EFGH").get());
-    await assertFails(bobDb.collection("friendCodes").doc("MP-ABCD-EFGH").get());
+    await assertSucceeds(aliceDb.collection("friendCodes").doc("MP-ABCD-EFGH").get());
+    await assertSucceeds(bobDb.collection("friendCodes").doc("MP-ABCD-EFGH").get());
     await assertFails(aliceDb.collection("friendCodes").get());
     await assertFails(aliceDb.collection("friendCodes").doc("MP-2345-6789").set({ uid: "alice" }));
     await assertFails(bobDb.collection("friendCodes").doc("MP-2345-6789").set({ uid: "alice" }));
@@ -740,36 +746,27 @@ describe("Motion.Pulse Firestore Security Rules", () => {
   test("profileSync: owner can write their user doc, publicProfile, and friendCode mapping", async () => {
     const aliceDb = testEnv.authenticatedContext("alice").firestore();
 
-    // Write user profile
-    await assertSucceeds(
-      aliceDb.collection("users").doc("alice").set({
-        uid: "alice",
-        displayName: "Alice",
-        email: "alice@test.com",
-        friendCode: "MP-ALIC-EE01",
-        totalAuraXp: 100,
-        currentLevel: 2
-      })
-    );
-
-    // Write public profile
-    await assertSucceeds(
-      aliceDb.collection("publicProfiles").doc("alice").set({
-        uid: "alice",
-        displayName: "Alice",
-        totalAuraXp: 100,
-        currentLevel: 2,
-        currentStreak: 3,
-        friendCode: "MP-ALIC-EE01"
-      }, { merge: true })
-    );
-
-    // Write friend code mapping directly from client fails under locked rules
-    await assertFails(
-      aliceDb.collection("friendCodes").doc("MP-ALIC-EE01").set({
-        uid: "alice"
-      })
-    );
+    const batch = aliceDb.batch();
+    batch.set(aliceDb.collection("users").doc("alice"), {
+      uid: "alice",
+      displayName: "Alice",
+      email: "alice@test.com",
+      friendCode: "MP-ABCD-EFGH",
+      totalAuraXp: 100,
+      currentLevel: 2
+    });
+    batch.set(aliceDb.collection("publicProfiles").doc("alice"), {
+      uid: "alice",
+      displayName: "Alice",
+      totalAuraXp: 100,
+      currentLevel: 2,
+      currentStreak: 3,
+      friendCode: "MP-ABCD-EFGH"
+    });
+    batch.set(aliceDb.collection("friendCodes").doc("MP-ABCD-EFGH"), {
+      uid: "alice"
+    });
+    await assertSucceeds(batch.commit());
   });
 
   test("duels: participant can increment/decrement score by 1, cannot do invalid deltas or tamper with opponent, and full cycle test passes", async () => {
@@ -1187,25 +1184,96 @@ describe("Motion.Pulse Firestore Security Rules", () => {
     });
   });
 
-  describe("friendCodes and publicProfiles rules", () => {
-    test("stranger direct get and list on friendCodes are denied", async () => {
+  describe("friendCodes and publicProfiles rules (10 test cases)", () => {
+    test("1. signed-in user can get a single friendCodes document", async () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {
         const adminDb = context.firestore();
         await adminDb.collection("friendCodes").doc("MP-2345-6789").set({ uid: "alice" });
         await adminDb.terminate();
       });
-
       const bobDb = testEnv.authenticatedContext("bob").firestore();
-      await assertFails(bobDb.collection("friendCodes").doc("MP-2345-6789").get());
+      await assertSucceeds(bobDb.collection("friendCodes").doc("MP-2345-6789").get());
+    });
+
+    test("2. signed-in user cannot list friendCodes", async () => {
+      const bobDb = testEnv.authenticatedContext("bob").firestore();
       await assertFails(bobDb.collection("friendCodes").get());
     });
 
-    test("creating code with bad docId pattern fails", async () => {
-      const aliceDb = testEnv.authenticatedContext("alice").firestore();
-      await assertFails(aliceDb.collection("friendCodes").doc("INVALID_CODE").set({ uid: "alice" }));
+    test("3. unauthenticated user cannot get friendCodes", async () => {
+      const unauthDb = testEnv.unauthenticatedContext().firestore();
+      await assertFails(unauthDb.collection("friendCodes").doc("MP-2345-6789").get());
     });
 
-    test("publicProfiles get succeeds, list is denied", async () => {
+    test("4. user can create mapping for their own code in a batch together with publicProfiles update", async () => {
+      const aliceDb = testEnv.authenticatedContext("alice").firestore();
+      const batch = aliceDb.batch();
+      batch.set(aliceDb.collection("publicProfiles").doc("alice"), { uid: "alice", friendCode: "MP-2345-6789" });
+      batch.set(aliceDb.collection("friendCodes").doc("MP-2345-6789"), { uid: "alice" });
+      await assertSucceeds(batch.commit());
+    });
+
+    test("5. user cannot create a mapping that points to another uid", async () => {
+      const aliceDb = testEnv.authenticatedContext("alice").firestore();
+      const batch = aliceDb.batch();
+      batch.set(aliceDb.collection("publicProfiles").doc("alice"), { uid: "alice", friendCode: "MP-ABCD-EFGH" });
+      batch.set(aliceDb.collection("friendCodes").doc("MP-ABCD-EFGH"), { uid: "bob" });
+      await assertFails(batch.commit());
+    });
+
+    test("6. user cannot create a mapping for a code that is not the one in their publicProfiles", async () => {
+      const aliceDb = testEnv.authenticatedContext("alice").firestore();
+      const batch = aliceDb.batch();
+      batch.set(aliceDb.collection("publicProfiles").doc("alice"), { uid: "alice", friendCode: "MP-ABCD-EFGH" });
+      batch.set(aliceDb.collection("friendCodes").doc("MP-2345-6789"), { uid: "alice" });
+      await assertFails(batch.commit());
+    });
+
+    test("7. user cannot overwrite an existing mapping (update denied)", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await adminDb.collection("friendCodes").doc("MP-WXYZ-2345").set({ uid: "alice" });
+        await adminDb.terminate();
+      });
+      const aliceDb = testEnv.authenticatedContext("alice").firestore();
+      await assertFails(aliceDb.collection("friendCodes").doc("MP-WXYZ-2345").update({ uid: "alice" }));
+    });
+
+    test("8. user cannot create a code with a bad format (lowercase, wrong length, forbidden letters)", async () => {
+      const aliceDb = testEnv.authenticatedContext("alice").firestore();
+      const batch1 = aliceDb.batch();
+      batch1.set(aliceDb.collection("publicProfiles").doc("alice"), { uid: "alice", friendCode: "mp-2345-6789" });
+      batch1.set(aliceDb.collection("friendCodes").doc("mp-2345-6789"), { uid: "alice" });
+      await assertFails(batch1.commit());
+
+      const batch2 = aliceDb.batch();
+      batch2.set(aliceDb.collection("publicProfiles").doc("alice"), { uid: "alice", friendCode: "MP-1230-O0IL" });
+      batch2.set(aliceDb.collection("friendCodes").doc("MP-1230-O0IL"), { uid: "alice" });
+      await assertFails(batch2.commit());
+    });
+
+    test("9. owner can delete their own mapping, another user cannot", async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const adminDb = context.firestore();
+        await adminDb.collection("friendCodes").doc("MP-DEL1-DEL2").set({ uid: "alice" });
+        await adminDb.terminate();
+      });
+      const bobDb = testEnv.authenticatedContext("bob").firestore();
+      await assertFails(bobDb.collection("friendCodes").doc("MP-DEL1-DEL2").delete());
+
+      const aliceDb = testEnv.authenticatedContext("alice").firestore();
+      await assertSucceeds(aliceDb.collection("friendCodes").doc("MP-DEL1-DEL2").delete());
+    });
+
+    test("10. extra keys in the mapping document are denied", async () => {
+      const aliceDb = testEnv.authenticatedContext("alice").firestore();
+      const batch = aliceDb.batch();
+      batch.set(aliceDb.collection("publicProfiles").doc("alice"), { uid: "alice", friendCode: "MP-EXT1-EXT2" });
+      batch.set(aliceDb.collection("friendCodes").doc("MP-EXT1-EXT2"), { uid: "alice", extraField: "hack" });
+      await assertFails(batch.commit());
+    });
+
+    test("11. publicProfiles get succeeds, list with limit(1) allowed, list without limit or with limit(2) denied", async () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {
         const adminDb = context.firestore();
         await adminDb.collection("publicProfiles").doc("alice").set({ uid: "alice", displayName: "Alice" });
@@ -1214,7 +1282,9 @@ describe("Motion.Pulse Firestore Security Rules", () => {
 
       const bobDb = testEnv.authenticatedContext("bob").firestore();
       await assertSucceeds(bobDb.collection("publicProfiles").doc("alice").get());
+      await assertSucceeds(bobDb.collection("publicProfiles").limit(1).get());
       await assertFails(bobDb.collection("publicProfiles").get());
+      await assertFails(bobDb.collection("publicProfiles").limit(2).get());
     });
   });
 });

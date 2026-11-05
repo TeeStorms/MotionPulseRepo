@@ -54,7 +54,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:letterSpacing="0.0"
-            android:text="Tap a beat to log how you feel right now"
+            android:text="@string/mood_subtitle"
             android:textColor="@color/text_secondary"
             android:textSize="14sp" />
 
@@ -74,7 +74,7 @@
                 style="@style/TextAppearance.MotionPulse.TitleMedium"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="What's shaping it?"
+                android:text="@string/mood_factors_title"
                 android:textColor="@color/text_primary"
                 android:textSize="20sp"
                 android:textStyle="bold" />
@@ -97,7 +97,7 @@
                     style="@style/Widget.MotionPulse.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="40dp"
-                    android:text="Sleep 😴"
+                    android:text="@string/mood_factor_sleep"
                     android:textSize="14sp" />
 
                 <com.google.android.material.chip.Chip
@@ -105,7 +105,7 @@
                     style="@style/Widget.MotionPulse.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="40dp"
-                    android:text="Work 💼"
+                    android:text="@string/mood_factor_work"
                     android:textSize="14sp" />
 
                 <com.google.android.material.chip.Chip
@@ -113,7 +113,7 @@
                     style="@style/Widget.MotionPulse.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="40dp"
-                    android:text="Health 🏃"
+                    android:text="@string/mood_factor_health"
                     android:textSize="14sp" />
 
                 <com.google.android.material.chip.Chip
@@ -121,7 +121,7 @@
                     style="@style/Widget.MotionPulse.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="40dp"
-                    android:text="Social 👥"
+                    android:text="@string/mood_factor_social"
                     android:textSize="14sp" />
 
                 <com.google.android.material.chip.Chip
@@ -129,7 +129,7 @@
                     style="@style/Widget.MotionPulse.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="40dp"
-                    android:text="Weather ☀️"
+                    android:text="@string/mood_factor_weather"
                     android:textSize="14sp" />
             </com.google.android.material.chip.ChipGroup>
         </LinearLayout>

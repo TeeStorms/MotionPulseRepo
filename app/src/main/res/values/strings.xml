@@ -10,6 +10,10 @@
     <string name="error_user_not_found">No account found with that email.</string>
     <string name="error_wrong_password">Incorrect password. Try again or reset it below.</string>
     <string name="error_no_internet">No internet connection — check your network and try again.</string>
+    <string name="error_cant_reach_server" translatable="false">Can\'t reach the server. Check your internet connection and try again.</string>
+    <string name="error_dns_vpn_note" translatable="false">Your phone could not connect to Firebase. Try another network or turn off Private DNS or your VPN.</string>
+    <string name="error_no_account_found" translatable="false">No account found with that code. Check it with your friend.</string>
+    <string name="error_self_code" translatable="false">That\'s your own code.</string>
     <string name="error_too_many_requests">Too many attempts. Please wait a moment before trying again.</string>
     <string name="error_generic_auth">An error occurred during authentication. Please try again later.</string>
     <string name="info_reset_email_sent">If an account exists for that email, a reset link has been sent.</string>
@@ -21,14 +25,15 @@
     <string name="error_google_config">Sign-in is not correctly configured for this app.</string>
     <string name="error_google_generic">Google sign-in failed. Please try again.</string>
     <string name="error_google_cancelled">Sign-in cancelled.</string>
-    <string name="default_web_client_id">1076060472554-3t3qj90qusil1pl9c5g8gk4fs1a5lh71.apps.googleusercontent.com</string>
+    <string name="default_web_client_id" translatable="false">1076060472554-3t3qj90qusil1pl9c5g8gk4fs1a5lh71.apps.googleusercontent.com</string>
+    <string name="welcome_back_placeholder" translatable="false">Welcome back,\n%1$s</string>
     <!-- Strings used for fragments for navigation -->
-    <string name="first_fragment_label">First Fragment</string>
-    <string name="second_fragment_label">Second Fragment</string>
-    <string name="next">Next</string>
-    <string name="previous">Previous</string>
+    <string name="first_fragment_label" translatable="false">First Fragment</string>
+    <string name="second_fragment_label" translatable="false">Second Fragment</string>
+    <string name="next" translatable="false">Next</string>
+    <string name="previous" translatable="false">Previous</string>
 
-    <string name="lorem_ipsum">
+    <string name="lorem_ipsum" translatable="false">
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam in scelerisque sem. Mauris
         volutpat, dolor id interdum ullamcorper, risus dolor egestas lectus, sit amet mattis purus
         dui nec risus. Maecenas non sodales nisi, vel dictum dolor. Class aptent taciti sociosqu ad
@@ -67,4 +72,89 @@
     <string name="settings_section_preferences">Preferences</string>
     <string name="notifications_title">Notifications</string>
     <string name="feed_heading_recent_activity">Recent activity</string>
+    <string name="language_en">English</string>
+    <string name="language_af">Afrikaans</string>
+    <string name="language_tn">Setswana</string>
+    <string name="language_zu">isiZulu</string>
+    <string name="language_ts">Xitsonga</string>
+    <string name="dialog_title_language">Language</string>
+    <string name="feed_completed_all_habits">%1$s completed all habits</string>
+    <string name="feed_streak_at_risks">%1$s\'s streak is at risk</string>
+    <plurals name="feed_streak_milestone">
+        <item quantity="one">%1$s hit a 1-day streak</item>
+        <item quantity="other">%1$s hit a %2$d-day streak</item>
+    </plurals>
+    <plurals name="feed_streak_milestone_with_habit">
+        <item quantity="one">%1$s hit a 1-day streak on \"%2$s\"</item>
+        <item quantity="other">%1$s hit a %3$d-day streak on \"%2$s\"</item>
+    </plurals>
+
+    <!-- In-Scope Strings -->
+    <string name="home_welcome_back">Welcome back,\n%1$s</string>
+    <string name="home_motivation_title">MOTIVATION OF THE DAY</string>
+
+    <string name="mood_header">How\'s your rhythm today?</string>
+    <string name="mood_subtitle">Tap a beat to log how you feel right now</string>
+    <string name="mood_factors_title">What\'s shaping it?</string>
+    <string name="mood_factor_sleep">Sleep 😴</string>
+    <string name="mood_factor_work">Work 💼</string>
+    <string name="mood_factor_health">Health 🏃</string>
+    <string name="mood_factor_social">Social 👥</string>
+    <string name="mood_factor_weather">Weather ☀️</string>
+    <string name="mood_level_energized">Energized</string>
+    <string name="mood_level_good">Good</string>
+    <string name="mood_level_steady">Steady</string>
+    <string name="mood_level_low">Low</string>
+    <string name="mood_level_drained">Drained</string>
+    <string name="mood_button_log">Log mood</string>
+    <string name="mood_button_update">Update mood</string>
+
+    <string name="duels_title">Habit Duels</string>
+    <string name="duels_challenge_button">Challenge a Friend</string>
+    <string name="duels_challenge_subtitle">Whoever logs the most habits in 7 days wins. Starts today, ends in 7 days.</string>
+    <string name="duel_vs">VS</string>
+    <string name="duel_you">You</string>
+    <string name="duel_unknown_user">Unknown User</string>
+    <string name="duel_victory">Victory 🎉</string>
+    <string name="duel_ends_today">Ends today</string>
+    <plurals name="duel_days_left">
+        <item quantity="one">%1$d day left</item>
+        <item quantity="other">%1$d days left</item>
+    </plurals>
+
+    <string name="stats_insight_not_enough_data">Log a few more days to unlock rhythm insights!</string>
+    <string name="stats_best_day_none">No best day logged yet</string>
+
+    <string-array name="daily_quotes" translatable="false">
+        <item>Consistency is key</item>
+        <item>Small steps lead to big results</item>
+        <item>Discipline is choosing between what you want now and what you want most</item>
+        <item>The secret of your future is hidden in your daily routine</item>
+        <item>Habits are the compound interest of self-improvement</item>
+        <item>Your rhythm defines your life</item>
+        <item>Master your habits, master your destiny</item>
+        <item>Action is the foundational key to all success</item>
+        <item>You don\'t have to be extreme, just consistent</item>
+        <item>Success is the product of daily habits—not once-in-a-lifetime transformations</item>
+        <item>Focus on progress, not perfection</item>
+        <item>Every action you take is a vote for the type of person you wish to become</item>
+        <item>Motivation gets you started. Habit keeps you going</item>
+        <item>Energy flows where attention goes</item>
+        <item>Excellence is not an act, but a habit</item>
+        <item>Fall in love with the process, and the results will follow</item>
+        <item>Do something today that your future self will thank you for</item>
+        <item>Willpower is like a muscle; the more you use it, the stronger it gets</item>
+        <item>Your habits will determine your future</item>
+        <item>Small disciplines repeated with consistency every day lead to great achievements</item>
+        <item>Start where you are. Use what you have. Do what you can</item>
+        <item>Dream big. Start small. Act now</item>
+        <item>Success isn\'t always about greatness. It\'s about consistency</item>
+        <item>To change your life, you need to change your daily priorities</item>
+        <item>Keep going. Everything you need will come to you at the perfect time</item>
+        <item>Believe you can and you\'re halfway there</item>
+        <item>The expert in anything was once a beginner</item>
+        <item>Don\'t watch the clock; do what it does. Keep going</item>
+        <item>Quality is not an act, it is a habit</item>
+        <item>Turn your goals into daily habits</item>
+    </string-array>
 </resources>

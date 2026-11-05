@@ -83,9 +83,10 @@ class DashboardFragment : Fragment() {
 
                 launch {
                     authViewModel.authState.collectLatest { state ->
-                        val uid = (state as? AuthState.Authenticated)?.uid ?: ""
+                        val authenticatedState = state as? AuthState.Authenticated
+                        val uid = authenticatedState?.uid ?: ""
 
-                        binding.dropletHeader.setTitle("Welcome back,\nUser")
+                        binding.dropletHeader.setTitle(getString(R.string.welcome_back_placeholder, "User"))
                         binding.dropletHeader.setCaption("MOTION.PULSE")
 
                         if (uid.isNotEmpty()) {
@@ -95,6 +96,13 @@ class DashboardFragment : Fragment() {
                             )[HabitsViewModel::class.java]
 
                             setupDashboardContent(habitsViewModel)
+
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                habitsViewModel.userProfile.collectLatest { profile ->
+                                    val name = profile?.displayName?.takeIf { it.isNotBlank() } ?: "User"
+                                    binding.dropletHeader.setTitle(getString(R.string.welcome_back_placeholder, name))
+                                }
+                            }
                         }
                     }
                 }
@@ -166,7 +174,7 @@ class DashboardFragment : Fragment() {
                         val today = LocalDate.now()
                         val scheduledToday = allHabitsWithStatus.filter { habitWithStatus ->
                             !habitWithStatus.habit.isArchived &&
-                            FrequencyConfig.decodeSafe(habitWithStatus.habit.frequencyConfig).isScheduled(today)
+                                    FrequencyConfig.decodeSafe(habitWithStatus.habit.frequencyConfig).isScheduled(today)
                         }
 
                         val completed = scheduledToday.count { it.isCompletedToday }

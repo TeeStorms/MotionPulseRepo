@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Machine translated draft / human overrides, needs native review -->
+<resources>
+    <string name="app_name">Motion.Pulse</string>
+    <string name="action_settings">Swilerho</string>
+    <string name="error_empty_fields">Hi kombela u tlalisa tindhawu hinkwato</string>
+    <string name="error_invalid_email">Hi kombela u nghenisa e-mail leyi faneleke</string>
+    <string name="error_short_password">Pasiwedi yi fanele ku va ni maletere ya 6 kumbe ku tlula</string>
+    <string name="error_password_mismatch">Tipasiwedi a ti fani</string>
+    <string name="error_auth_failed">Ku tiyisisa ku tsandzekile. Ringeta nakambe.</string>
+    <string name="error_session_verify_failed">A swi kotekanga ku tiyisisa nkarhi wa wena — hi kombela u nghena</string>
+    <string name="error_user_not_found">Ku hava akhaonto leyi kumekaka hi e-mail leyi.</string>
+    <string name="error_wrong_password">Pasiwedi leyi hoxile. Ringeta nakambe.</string>
+    <string name="error_no_internet">Ku hava intanete — vona nethiweki ya wena u ringeta nakambe.</string>
+    <string name="error_too_many_requests">Ku ringeta ko tala ngopfu. Yimana nkarhinyana.</string>
+    <string name="error_generic_auth">Ku ve ni xihoxo hi nkarhi wo tiyisisa.</string>
+    <string name="info_reset_email_sent">Loko akhaonto yi ri kona hi e-mail leyi, xiyenge xo cinca xi rhumeriwile.</string>
+    <string name="error_email_collision">Akhaonto leyi nga ni e-mail leyi yi kona kale.</string>
+    <string name="error_weak_password">Pasiwedi yi tsweak ririmi — tirhisa maletere ya 6 kumbe ku tlula.</string>
+    <string name="error_profile_sync_failed">Akhaonto yi vumbiwile, kambe a hi swi kotanga ku lunghisa profayili ya wena.</string>
+    <string name="error_name_too_short">Vito ri fanele ku va ni maletere ya 2 kumbe ku tlula.</string>
+    <string name="error_google_no_accounts">Ku hava tiakhaonto ta Google eka fonisi leyi.</string>
+    <string name="error_google_config">Ku nghena a ku lulamiswanga kahle.</string>
+    <string name="error_google_generic">Ku nghena ka Google ku tsandzekile.</string>
+    <string name="error_google_cancelled">Ku nghena ku suriwile.</string>
+    <string name="settings_section_preferences">Leswi rhandziwaka</string>
+    <string name="notifications_title">Switiviso</string>
+    <string name="feed_heading_recent_activity">Mintirho ya sweswi</string>
+    <string name="language_en">Xinghezi</string>
+    <string name="language_af">Afrikaans</string>
+    <string name="language_tn">Setswana</string>
+    <string name="language_zu">isiZulu</string>
+    <string name="language_ts">Xitsonga</string>
+    <string name="dialog_title_language">Ririmi</string>
+    <string name="feed_completed_all_habits">%1$s u hetile swiendlo hinkwaswo</string>
+    <string name="feed_streak_at_risks">Ntila wa %1$s wu e khomeni</string>
+    <string name="home_welcome_back">Mi amukeriwile,\nFMT_1__</string>
+    <string name="home_motivation_title">Nsusumeto WA SIKU</string>
+    <string name="mood_header">Xana rhythm ya wena yi njhani namuntlha?</string>
+    <string name="mood_subtitle">Tap a beat ku log ndlela leyi u titwaka ha yona sweswi</string>
+    <string name="mood_factors_title">I yini lexi xi vumbeke?</string>
+    <string name="mood_factor_sleep">Ku etlela 😴</string>
+    <string name="mood_factor_work">Ntirho 💼</string>
+    <string name="mood_factor_health">Rihanyo 🏃</string>
+    <string name="mood_factor_social">Social 👥</string>
+    <string name="mood_factor_weather">Maxelo ☀️</string>
+    <string name="mood_level_energized">Ku va ni matimba</string>
+    <string name="mood_level_good">Kahle</string>
+    <string name="mood_level_steady">Tshamiseka</string>
+    <string name="mood_level_low">Hansi</string>
+    <string name="mood_level_drained">Ku khuluka mati</string>
+    <string name="mood_button_log">Log mood</string>
+    <string name="mood_button_update">Update mood</string>
+    <string name="duels_title">Ti Duels ta Mukhuva</string>
+    <string name="duels_challenge_button">Ntlhontlho Munghana</string>
+    <string name="duels_challenge_subtitle">Loyi a logaka mikhuva yo tala eka masiku ya 7 hi yena a hlulaka. Ku sungula namuntlha, ku hela hi masiku ya 7.</string>
+    <string name="duel_vs">VS</string>
+    <string name="duel_you">Wena</string>
+    <string name="duel_unknown_user">Mutirhisi la nga tiviwiki</string>
+    <string name="duel_victory">Ku hlula 🎉</string>
+    <string name="duel_ends_today">Swi hela namuntlha</string>
+    <string name="stats_insight_not_enough_data">Log masiku man’wana ma nga ri mangani ku pfula vutivi bya ncincancincano wa tindzimi!</string>
+    <string name="stats_best_day_none">Ku hava siku lerinene leri logiweke ku fikela sweswi</string>
+    <plurals name="feed_streak_milestone">
+        <item quantity="one">%1$s yi hlasele 1-day streak</item>
+        <item quantity="other">%1$s yi hlasele %2$d-siku ra ku landzelelana</item>
+    </plurals>
+    <plurals name="feed_streak_milestone_with_habit">
+        <item quantity="one">%1$s yi hlasele 1-day streak eka \"%2$s\".</item>
+        <item quantity="other">%1$s yi hlasele %3$d-siku eka \"%2$s\".</item>
+    </plurals>
+    <plurals name="duel_days_left">
+        <item quantity="one">%1$d siku ri sale</item>
+        <item quantity="other">Ku sale masiku %1$d</item>
+    </plurals>
+</resources>

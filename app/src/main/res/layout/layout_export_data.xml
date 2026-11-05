@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_dialog"
+    android:padding="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            style="@style/TextAppearance.MotionPulse.TitleLarge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Export my data"
+            android:textSize="22sp" />
+
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="16dp" />
+
+        <TextView
+            style="@style/TextAppearance.MotionPulse.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="SELECT DATA TO INCLUDE" />
+
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="8dp" />
+
+        <CheckBox
+            android:id="@+id/cb_habits"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="Habits"
+            android:textColor="@color/text_primary" />
+
+        <CheckBox
+            android:id="@+id/cb_completions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="Completions"
+            android:textColor="@color/text_primary" />
+
+        <CheckBox
+            android:id="@+id/cb_moods"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="Moods"
+            android:textColor="@color/text_primary" />
+
+        <CheckBox
+            android:id="@+id/cb_badges"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="Badges"
+            android:textColor="@color/text_primary" />
+
+        <CheckBox
+            android:id="@+id/cb_profile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="Profile summary"
+            android:textColor="@color/text_primary" />
+
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="16dp" />
+
+        <TextView
+            style="@style/TextAppearance.MotionPulse.Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="TIME RANGE" />
+
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="8dp" />
+
+        <RadioGroup
+            android:id="@+id/rg_range"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/rb_all_time"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="All time"
+                android:textColor="@color/text_primary" />
+
+            <RadioButton
+                android:id="@+id/rb_90_days"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Last 90 days"
+                android:textColor="@color/text_primary" />
+
+            <RadioButton
+                android:id="@+id/rb_30_days"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Last 30 days"
+                android:textColor="@color/text_primary" />
+        </RadioGroup>
+
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="16dp" />
+
+        <TextView
+            style="@style/TextAppearance.MotionPulse.Body"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="The file contains personal information. Share it only with people you trust."
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp" />
+
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="24dp" />
+
+        <!-- Initial Export Button -->
+        <Button
+            android:id="@+id/btn_export_action"
+            style="@style/Widget.MotionPulse.Button.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Export" />
+
+        <!-- Progress Container -->
+        <LinearLayout
+            android:id="@+id/layout_progress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <ProgressBar
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:indeterminateTint="@color/accent_primary" />
+
+            <TextView
+                android:id="@+id/tv_progress_status"
+                style="@style/TextAppearance.MotionPulse.Body"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Preparing export archive..."
+                android:textColor="@color/text_primary" />
+        </LinearLayout>
+
+        <!-- Result Actions Container -->
+        <LinearLayout
+            android:id="@+id/layout_result_actions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/btn_save_device"
+                style="@style/Widget.MotionPulse.Button.Secondary"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Save to device" />
+
+            <Space
+                android:layout_width="10dp"
+                android:layout_height="1dp" />
+
+            <Button
+                android:id="@+id/btn_share_export"
+                style="@style/Widget.MotionPulse.Button.Primary"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Share" />
+        </LinearLayout>
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

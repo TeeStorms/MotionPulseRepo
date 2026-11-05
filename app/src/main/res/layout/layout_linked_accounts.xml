@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_dialog"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        style="@style/TextAppearance.MotionPulse.TitleLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Linked accounts"
+        android:textSize="22sp" />
+
+    <Space
+        android:layout_width="1dp"
+        android:layout_height="8dp" />
+
+    <TextView
+        style="@style/TextAppearance.MotionPulse.Body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="You can sign in with any linked method."
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp" />
+
+    <Space
+        android:layout_width="1dp"
+        android:layout_height="16dp" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_linked_accounts"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:nestedScrollingEnabled="false" />
+
+</LinearLayout>

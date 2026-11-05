@@ -1,0 +1,36 @@
+# Home
+home_welcome_back
+home_motivation_title
+daily_quotes
+
+# Mood
+mood_header
+mood_subtitle
+mood_factors_title
+mood_factor_sleep
+mood_factor_work
+mood_factor_health
+mood_factor_social
+mood_factor_weather
+mood_level_energized
+mood_level_good
+mood_level_steady
+mood_level_low
+mood_level_drained
+mood_button_log
+mood_button_update
+
+# Community
+duels_title
+duels_challenge_button
+duels_challenge_subtitle
+duel_vs
+duel_you
+duel_unknown_user
+duel_victory
+duel_ends_today
+duel_days_left
+
+# Stats
+stats_insight_not_enough_data
+stats_best_day_none

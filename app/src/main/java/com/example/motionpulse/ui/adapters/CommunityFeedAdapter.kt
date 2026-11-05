@@ -32,11 +32,7 @@ class CommunityFeedAdapter(
         fun bind(item: ActivityFeedEntry) {
             binding.avatarView.setDisplayName(item.actorName)
 
-            val sentence = when (item.eventType) {
-                FeedEventType.ALL_HABITS_COMPLETED -> "${item.actorName} completed all habits"
-                FeedEventType.STREAK_MILESTONE -> "${item.actorName} reached a ${item.streakCount ?: 0}-day streak"
-                FeedEventType.STREAK_AT_RISK -> "${item.actorName}'s streak is at risk"
-            }
+            val sentence = com.example.motionpulse.util.FeedTextFormatter.format(binding.root.context, item)
             binding.tvSentence.text = sentence
             binding.tvTimeAgo.text = TimeAgoFormatter.format(item.timestamp)
 

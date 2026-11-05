@@ -38,7 +38,7 @@
                         style="@style/TextAppearance.MotionPulse.TitleMedium"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Habit Duels"
+                        android:text="@string/duels_title"
                         android:textColor="@color/text_primary"
                         android:textSize="18sp"
                         android:textStyle="bold" />
@@ -48,7 +48,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
-                        android:text="Challenge a friend to a 7-day head-to-head consistency race!"
+                        android:text="@string/duels_challenge_subtitle"
                         android:textColor="@color/text_secondary"
                         android:textSize="14sp" />
 
@@ -59,7 +59,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
                         android:minHeight="48dp"
-                        android:text="Challenge a Friend" />
+                        android:text="@string/duels_challenge_button" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

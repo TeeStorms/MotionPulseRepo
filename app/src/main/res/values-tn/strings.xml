@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Machine translated draft / human overrides, needs native review -->
+<resources>
+    <string name="app_name">Motion.Pulse</string>
+    <string name="action_settings">Diatla</string>
+    <string name="error_empty_fields">Tsweetswee tlatsa dikgeo tsotlhe</string>
+    <string name="error_invalid_email">Tsweetswee tsaya aterese ya poso e e siameng</string>
+    <string name="error_short_password">Lentswe la sephiri le tshwanetse go nna le ditlhaka di le 6 kana go feta</string>
+    <string name="error_password_mismatch">Mafoko a sephiri ga a tshwane</string>
+    <string name="error_auth_failed">Go netefatsa go padile. Tsweetswee leka gape.</string>
+    <string name="error_session_verify_failed">Go sitilwe go netefatsa nako ya gago — tsweetswee tsena</string>
+    <string name="error_user_not_found">Ga go na akhaonto e e fitlhetsweng ka poso eo.</string>
+    <string name="error_wrong_password">Lentswe la sephiri le fosagetse. Leka gape.</string>
+    <string name="error_no_internet">Ga go na maranyane — tlhatlhoba maranyane a gago mme o leke gape.</string>
+    <string name="error_too_many_requests">Maiteko a mantsi mangwe. Emang se se kae.</string>
+    <string name="error_generic_auth">Phoso e diragetse ka nako ya netefatso.</string>
+    <string name="info_reset_email_sent">Ge akhaonto e le teng ka poso eo, kgokaganyo ya tsosoloso e rometswe.</string>
+    <string name="error_email_collision">Akhaonto e e nang le poso eo e setse e le teng.</string>
+    <string name="error_weak_password">Lentswe la sephiri le bokowa — dirisa ditlhaka di le 6 kana go feta.</string>
+    <string name="error_profile_sync_failed">Akhaonto e bopilwe, mme re sitilwe go baya porofiele ya gago.</string>
+    <string name="error_name_too_short">Leina le tshwanetse go nna le ditlhaka di le 2 kana go feta.</string>
+    <string name="error_google_no_accounts">Ga go na diakhaonto tsa Google mo sediriseng seno.</string>
+    <string name="error_google_config">Go tsena ga go rulagantswe sentle.</string>
+    <string name="error_google_generic">Go tsena ga Google go padile.</string>
+    <string name="error_google_cancelled">Go tsena go phimotswe.</string>
+    <string name="settings_section_preferences">Dikeletso</string>
+    <string name="notifications_title">Dikitsiso</string>
+    <string name="feed_heading_recent_activity">Ditiro tsa bosheng</string>
+    <string name="language_en">Sekgoa</string>
+    <string name="language_af">Afrikaans</string>
+    <string name="language_tn">Setswana</string>
+    <string name="language_zu">isiZulu</string>
+    <string name="language_ts">Xitsonga</string>
+    <string name="dialog_title_language">Puô</string>
+    <string name="feed_completed_all_habits">%1$s o weditse ditiro tsotlhe</string>
+    <string name="feed_streak_at_risks">Motse wa ga %1$s o mo kotsing</string>
+    <string name="home_welcome_back">O amogetswe gape,\n%1$s</string>
+    <string name="home_motivation_title">THOTLOETSO YA LETSATSI</string>
+    <string name="mood_header">Morethetho wa gago o ntse jang gompieno?</string>
+    <string name="mood_subtitle">Konya go itaya go kwala gore o ikutlwa jang gone jaanong</string>
+    <string name="mood_factors_title">Ke eng se se e bopang?</string>
+    <string name="mood_factor_sleep">Robala 😴</string>
+    <string name="mood_factor_work">Tiro 💼 .</string>
+    <string name="mood_factor_health">Boitekanelo 🏃</string>
+    <string name="mood_factor_social">Loago 👥</string>
+    <string name="mood_factor_weather">Maemo a bosa ☀️</string>
+    <string name="mood_level_energized">Maatla</string>
+    <string name="mood_level_good">Molemo</string>
+    <string name="mood_level_steady">Tsepama</string>
+    <string name="mood_level_low">Kwa tlase</string>
+    <string name="mood_level_drained">E tsholotswe</string>
+    <string name="mood_button_log">Maikutlo a kwala</string>
+    <string name="mood_button_update">Ntšhwafatsa maikutlo</string>
+    <string name="duels_title">Dikganetsano tsa Mekgwa</string>
+    <string name="duels_challenge_button">Gwetlha Tsala</string>
+    <string name="duels_challenge_subtitle">Yo o logang mekgwa e mentsi mo malatsing a le 7 o a fenya. E simolola gompieno, e fela mo malatsing a le 7.</string>
+    <string name="duel_vs">VS</string>
+    <string name="duel_you">Wena</string>
+    <string name="duel_unknown_user">Modirisi yo o sa itsiweng</string>
+    <string name="duel_victory">Phenyo 🎉</string>
+    <string name="duel_ends_today">E fela gompieno</string>
+    <string name="stats_insight_not_enough_data">Tsenya malatsi a mangwe a le mmalwa go lotlolola dintlha tsa moribo!</string>
+    <string name="stats_best_day_none">Ga go ise go kwalwe letsatsi le le gaisang</string>
+    <plurals name="feed_streak_milestone">
+        <item quantity="one">%1$s e fitlheletse motseletsele wa letsatsi le le 1</item>
+        <item quantity="other">%1$s e fitlheletse motseletsele wa %2$d-malatsi</item>
+    </plurals>
+    <plurals name="feed_streak_milestone_with_habit">
+        <item quantity="one">%1$s e fitlheletse motseletsele wa letsatsi le le 1 mo \"%2$s\"</item>
+        <item quantity="other">%1$s e fitlheletse motseletsele wa malatsi a le 1__ ka \"%2$s\"</item>
+    </plurals>
+    <plurals name="duel_days_left">
+        <item quantity="one">%1$d letsatsi le le setseng</item>
+        <item quantity="other">%1$d malatsi a a setseng</item>
+    </plurals>
+</resources>

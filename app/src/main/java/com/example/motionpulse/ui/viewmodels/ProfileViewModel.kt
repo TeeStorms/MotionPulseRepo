@@ -173,6 +173,28 @@ class ProfileViewModel(
         }
     }
 
+    private val communityRepository = com.example.motionpulse.data.repository.CommunityRepository()
+
+    fun deleteActorFeedEntries() {
+        viewModelScope.launch {
+            try {
+                communityRepository.deleteActorFeedEntriesInBatches(userId)
+            } catch (e: Exception) {
+                android.util.Log.e("ProfileViewModel", "Failed to delete actor feed entries: ${e.message}", e)
+            }
+        }
+    }
+
+    fun removeHabitNamesFromFeedEntries() {
+        viewModelScope.launch {
+            try {
+                communityRepository.removeHabitNameFromActorFeedEntries(userId)
+            } catch (e: Exception) {
+                android.util.Log.e("ProfileViewModel", "Failed to remove habit names from feed entries: ${e.message}", e)
+            }
+        }
+    }
+
     class Factory(private val db: AppDatabase, private val userId: String) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             return ProfileViewModel(db, userId) as T

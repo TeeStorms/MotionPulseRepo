@@ -56,8 +56,8 @@ class HabitsAdapter(
             }
             binding.viewCategoryDot.setBackgroundColor(Color.parseColor(dotColorHex))
 
-            // Score pill
-            val scorePct = (item.habit.habitStrengthScore * 100).toInt().coerceIn(0, 100)
+            // Score pill using HabitStrengthFormatter
+            val scorePct = com.example.motionpulse.util.HabitStrengthFormatter.toPercent(item.habit.habitStrengthScore)
             binding.tvScore.text = "$scorePct%"
             binding.cardScorePill.contentDescription = "Strength score $scorePct percent"
 

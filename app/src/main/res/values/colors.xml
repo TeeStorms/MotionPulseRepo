@@ -31,4 +31,9 @@
     <color name="habits_category_fitness_dot">#FF2E2E</color>
     <color name="habits_category_routine_dot">#5E82FF</color>
     <color name="add_habit_input_bg">#0A010D</color>
+
+    <!-- Chart Tokens -->
+    <color name="mood_line">#4FC3F7</color>
+    <color name="habit_done">#FF2A85</color>
+    <color name="habit_missed">#2C1236</color>
 </resources>

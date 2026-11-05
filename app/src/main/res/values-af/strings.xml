@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Machine translated draft / human overrides, needs native review -->
+<resources>
+    <string name="app_name">Motion.Pulse</string>
+    <string name="action_settings">Instellings</string>
+    <string name="error_empty_fields">Vul asseblief al die velde in</string>
+    <string name="error_invalid_email">Voer asseblief \'n geldige e-posadres in</string>
+    <string name="error_short_password">Wagwoord moet ten minste 6 tekens wees</string>
+    <string name="error_password_mismatch">Wagwoorde stem nie ooreen nie</string>
+    <string name="error_auth_failed">Verifikasie het misluk. Probeer asseblief weer.</string>
+    <string name="error_session_verify_failed">Kon nie jou sessie verifieer nie — meld asseblief aan</string>
+    <string name="error_user_not_found">Geen rekening gevind met daardie e-pos nie.</string>
+    <string name="error_wrong_password">Verkeerde wagwoord. Probeer weer of stel dit hieronder terug.</string>
+    <string name="error_no_internet">Geen internetverbinding — kyk na jou netwerk en probeer weer.</string>
+    <string name="error_too_many_requests">Te veel pogings. Wag asseblief \'n oomblik voordat jy weer probeer.</string>
+    <string name="error_generic_auth">\'n Fout het tydens verifikasie voorgekom. Probeer asseblief later weer.</string>
+    <string name="info_reset_email_sent">As \'n rekening vir daardie e-pos bestaan, is \'n herstel-skakel gestuur.</string>
+    <string name="error_email_collision">\'n Rekening met daardie e-pos bestaan reeds.</string>
+    <string name="error_weak_password">Wagwoord is te swak — gebruik ten minste 6 tekens.</string>
+    <string name="error_profile_sync_failed">Rekening geskep, maar ons kon nie jou profiel opstel nie — probeer asseblief aanmeld.</string>
+    <string name="error_name_too_short">Naam moet ten minste 2 tekens wees.</string>
+    <string name="error_google_no_accounts">Geen Google-rekeninge op hierdie toestel gevind nie.</string>
+    <string name="error_google_config">Aanmelding is nie korrek vir hierdie toepassing opgestel nie.</string>
+    <string name="error_google_generic">Google-aanmelding het misluk. Probeer asseblief weer.</string>
+    <string name="error_google_cancelled">Aanmelding gekanselleer.</string>
+    <string name="settings_section_preferences">Voorkeure</string>
+    <string name="notifications_title">Kennisgewings</string>
+    <string name="feed_heading_recent_activity">Onlangse aktiwiteit</string>
+    <string name="language_en">Engels</string>
+    <string name="language_af">Afrikaans</string>
+    <string name="language_tn">Setswana</string>
+    <string name="language_zu">isiZulu</string>
+    <string name="language_ts">Xitsonga</string>
+    <string name="dialog_title_language">Taal</string>
+    <string name="feed_completed_all_habits">%1$s het alle gewoontes voltooi</string>
+    <string name="feed_streak_at_risks">%1$s se streep is in gevaar</string>
+    <string name="home_welcome_back">Welkom terug, \n%1$s</string>
+    <string name="home_motivation_title">MOTIVERING VAN DIE DAG</string>
+    <string name="mood_header">Hoe lyk jou ritme vandag?</string>
+    <string name="mood_subtitle">Tik op \'n maat om aan te teken hoe jy nou voel</string>
+    <string name="mood_factors_title">Wat vorm dit?</string>
+    <string name="mood_factor_sleep">Slaap 😴</string>
+    <string name="mood_factor_work">Werk 💼</string>
+    <string name="mood_factor_health">Gesondheid 🏃</string>
+    <string name="mood_factor_social">Sosiaal 👥</string>
+    <string name="mood_factor_weather">Weer ☀️</string>
+    <string name="mood_level_energized">Energiek</string>
+    <string name="mood_level_good">Goed</string>
+    <string name="mood_level_steady">Bestendig</string>
+    <string name="mood_level_low">Laag</string>
+    <string name="mood_level_drained">Gedreineer</string>
+    <string name="mood_button_log">Log stemming</string>
+    <string name="mood_button_update">Opdateer bui</string>
+    <string name="duels_title">Gewoonte-duels</string>
+    <string name="duels_challenge_button">Daag \'n vriend uit</string>
+    <string name="duels_challenge_subtitle">Wie ook al die meeste gewoontes in 7 dae aanteken, wen. Begin vandag, eindig oor 7 dae.</string>
+    <string name="duel_vs">VS</string>
+    <string name="duel_you">Jy</string>
+    <string name="duel_unknown_user">Onbekende Gebruiker</string>
+    <string name="duel_victory">Oorwinning 🎉</string>
+    <string name="duel_ends_today">Eindig vandag</string>
+    <string name="stats_insight_not_enough_data">Teken nog \'n paar dae aan om ritme-insigte te ontsluit!</string>
+    <string name="stats_best_day_none">Geen beste dag nog aangeteken nie</string>
+    <plurals name="feed_streak_milestone">
+        <item quantity="one">%1$s het \'n reeks van 1 dae bereik</item>
+        <item quantity="other">%1$s het \'n %2$d-dag reeks getref</item>
+    </plurals>
+    <plurals name="feed_streak_milestone_with_habit">
+        <item quantity="one">%1$s het \'n 1-dag reeks op \\%2$s\\ geslaan</item>
+        <item quantity="other">%1$s het \'n %3$d-dag reeks op \\%2$s\\ geslaan</item>
+    </plurals>
+    <plurals name="duel_days_left">
+        <item quantity="one">%1$d dag oor</item>
+        <item quantity="other">%1$d dae oor</item>
+    </plurals>
+</resources>

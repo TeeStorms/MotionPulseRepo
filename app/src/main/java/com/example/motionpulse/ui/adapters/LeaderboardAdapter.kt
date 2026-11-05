@@ -48,9 +48,16 @@ class LeaderboardAdapter(
             binding.tvMetricValue.text = when (currentMetric) {
                 LeaderboardMetric.WEEKLY_XP -> {
                     val weekAgo = LocalDate.now().minusDays(7)
-                    val weeklyXp = item.recentXp.filterKeys {
-                        try { LocalDate.parse(it).isAfter(weekAgo.minusDays(1)) } catch (e: Exception) { false }
+                    // Safely parse recentXp and sum values for the last 7 days
+                    val weeklyXp = item.recentXp.filterKeys { dateStr ->
+                        try {
+                            val date = LocalDate.parse(dateStr)
+                            !date.isBefore(weekAgo)
+                        } catch (e: Exception) {
+                            false
+                        }
                     }.values.sum()
+
                     "$weeklyXp XP"
                 }
                 LeaderboardMetric.STREAK -> "🔥 ${item.currentStreak}d"

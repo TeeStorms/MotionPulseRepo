@@ -76,7 +76,7 @@
     </style>
 
     <style name="Theme.MotionPulse.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
-        <item name="android:background">@drawable/bg_dialog</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:textColorPrimary">@color/text_primary</item>
     </style>
 

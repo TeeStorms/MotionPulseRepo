@@ -14,15 +14,18 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.room.Room
 import com.example.motionpulse.R
 import com.example.motionpulse.data.local.AppDatabase
+import com.example.motionpulse.data.local.entity.FriendEntity
 import com.example.motionpulse.data.repository.PreferenceRepository
 import com.example.motionpulse.databinding.LayoutManageFriendsBinding
 import com.example.motionpulse.domain.auth.AuthViewModel
 import com.example.motionpulse.domain.models.UiState
+import com.example.motionpulse.ui.adapters.IncomingRequestsAdapter
 import com.example.motionpulse.ui.adapters.ManageFriendsAdapter
 import com.example.motionpulse.ui.views.StateLayout
 import com.example.motionpulse.ui.viewmodels.CommunityViewModel
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -48,6 +51,7 @@ class ManageFriendsBottomSheetDialogFragment : BottomSheetDialogFragment() {
     }
 
     private lateinit var friendsAdapter: ManageFriendsAdapter
+    private lateinit var incomingAdapter: IncomingRequestsAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -72,7 +76,7 @@ class ManageFriendsBottomSheetDialogFragment : BottomSheetDialogFragment() {
                                 CommunityViewModel.Factory(db, uid, requireContext())
                             )[CommunityViewModel::class.java]
 
-                            setupFriendsList(communityViewModel)
+                            setupFriendsList(communityViewModel, uid)
                         }
                     }
                 }
@@ -80,7 +84,7 @@ class ManageFriendsBottomSheetDialogFragment : BottomSheetDialogFragment() {
         }
     }
 
-    private fun setupFriendsList(viewModel: CommunityViewModel) {
+    private fun setupFriendsList(viewModel: CommunityViewModel, currentUserId: String) {
         friendsAdapter = ManageFriendsAdapter(
             mutedUserIds = viewModel.mutedUserIds.value,
             onMuteToggle = { friend, mute ->
@@ -111,11 +115,64 @@ class ManageFriendsBottomSheetDialogFragment : BottomSheetDialogFragment() {
             }
         )
 
+        incomingAdapter = IncomingRequestsAdapter(
+            onAccept = { req, onComplete ->
+                viewLifecycleOwner.lifecycleScope.launch {
+                    try {
+                        viewModel.respondToRequest(req.id, req.requesterUid, true)
+                        Snackbar.make(binding.root, "You are now friends!", Snackbar.LENGTH_SHORT).show()
+                        onComplete(true)
+                    } catch (e: Exception) {
+                        Snackbar.make(binding.root, e.message ?: "This request is no longer available", Snackbar.LENGTH_LONG).show()
+                        onComplete(false)
+                    }
+                }
+            },
+            onDelete = { req ->
+                // Decline with 5s Undo snackbar
+                Snackbar.make(binding.root, "Request declined", Snackbar.LENGTH_LONG)
+                    .setAction("Undo") {
+                        // Undo action: restore or do nothing
+                    }
+                    .addCallback(object : com.google.android.material.snackbar.BaseTransientBottomBar.BaseCallback<Snackbar>() {
+                        override fun onDismissed(transientBottomBar: Snackbar?, event: Int) {
+                            if (event != DISMISS_EVENT_ACTION) {
+                                viewLifecycleOwner.lifecycleScope.launch {
+                                    try {
+                                        viewModel.respondToRequest(req.id, req.requesterUid, false)
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("ManageFriendsDialog", "Error declining request on dismiss: ${e.message}", e)
+                                    }
+                                }
+                            }
+                        }
+                    })
+                    .show()
+            }
+        )
+
         binding.rvManageFriends.layoutManager = LinearLayoutManager(requireContext())
         binding.rvManageFriends.adapter = friendsAdapter
 
+        binding.rvIncomingRequests.layoutManager = LinearLayoutManager(requireContext())
+        binding.rvIncomingRequests.adapter = incomingAdapter
+
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    viewModel.incomingRequestsState.collectLatest { state ->
+                        if (state is UiState.Success) {
+                            binding.tvIncomingHeader.visibility = View.VISIBLE
+                            binding.rvIncomingRequests.visibility = View.VISIBLE
+                            incomingAdapter.submitList(state.data)
+                        } else {
+                            binding.tvIncomingHeader.visibility = View.GONE
+                            binding.rvIncomingRequests.visibility = View.GONE
+                            incomingAdapter.submitList(emptyList())
+                        }
+                    }
+                }
+
                 launch {
                     viewModel.friendsState.collectLatest { state ->
                         when (state) {

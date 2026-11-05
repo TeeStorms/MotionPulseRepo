@@ -185,6 +185,9 @@ class LoginFragment : Fragment() {
                     GoogleSignInResult.NoAccounts -> {
                         Toast.makeText(requireContext(), "No Google accounts found on device", Toast.LENGTH_SHORT).show()
                     }
+                    GoogleSignInResult.PlayServicesUnavailable -> {
+                        Toast.makeText(requireContext(), "Google sign-in isn't available on this device. Use email and password.", Toast.LENGTH_LONG).show()
+                    }
                 }
             } catch (e: Exception) {
                 android.util.Log.e("LoginFragment", "Google sign-in exception: ${e.message}", e)

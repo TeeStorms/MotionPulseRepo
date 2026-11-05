@@ -12,44 +12,11 @@
         android:orientation="vertical"
         android:paddingBottom="96dp">
 
-        <!-- Gradient Header -->
-        <LinearLayout
+        <!-- Droplet Header -->
+        <com.example.motionpulse.ui.views.DropletHeaderView
+            android:id="@+id/droplet_header"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/header_gradient_2_stop"
-            android:gravity="center_horizontal"
-            android:orientation="vertical"
-            android:paddingStart="16dp"
-            android:paddingTop="36dp"
-            android:paddingEnd="16dp"
-            android:paddingBottom="28dp">
-
-            <com.example.motionpulse.ui.views.UserAvatarView
-                android:id="@+id/avatar_view"
-                android:layout_width="64dp"
-                android:layout_height="64dp" />
-
-            <Space
-                android:layout_width="1dp"
-                android:layout_height="12dp" />
-
-            <TextView
-                android:id="@+id/tv_profile_name"
-                style="@style/TextAppearance.MotionPulse.TitleLarge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="User Name"
-                android:textSize="22sp" />
-
-            <TextView
-                android:id="@+id/tv_member_since"
-                style="@style/TextAppearance.MotionPulse.Caption"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Member since Jan 2026"
-                android:textColor="@color/text_secondary" />
-        </LinearLayout>
+            android:layout_height="wrap_content" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -436,8 +403,8 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
-                                android:maxLines="1"
-                                android:text="Receive habit reminders at scheduled times"
+                                android:maxLines="2"
+                                android:text="Get a notification at each habit's reminder time"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="12sp" />
                         </LinearLayout>
@@ -486,8 +453,8 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
-                                android:maxLines="1"
-                                android:text="Post streak achievements to community feed"
+                                android:maxLines="2"
+                                android:text="Post streaks and finished days to your friends' feed. Your level and streak still show on the leaderboard."
                                 android:textColor="@color/text_secondary"
                                 android:textSize="12sp" />
                         </LinearLayout>
@@ -507,6 +474,7 @@
 
                     <!-- Show Habit Names Row -->
                     <LinearLayout
+                        android:id="@+id/layout_row_show_habit_names"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
@@ -536,7 +504,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
                                 android:maxLines="1"
-                                android:text="Display habit titles on feed posts"
+                                android:text="Include the habit's name in your posts"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="12sp" />
                         </LinearLayout>

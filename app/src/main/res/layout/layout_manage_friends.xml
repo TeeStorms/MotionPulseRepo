@@ -1,32 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@drawable/bg_dialog"
-    android:orientation="vertical"
     android:padding="24dp">
 
-    <TextView
-        style="@style/TextAppearance.MotionPulse.TitleLarge"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Manage Friends"
-        android:textSize="22sp" />
-
-    <Space
-        android:layout_width="1dp"
-        android:layout_height="16dp" />
-
-    <com.example.motionpulse.ui.views.StateLayout
-        android:id="@+id/state_layout"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            style="@style/TextAppearance.MotionPulse.TitleLarge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Manage Friends"
+            android:textSize="22sp" />
+
+        <Space
+            android:layout_width="1dp"
+            android:layout_height="16dp" />
+
+        <!-- Incoming Requests Section -->
+        <TextView
+            android:id="@+id/tv_incoming_header"
+            style="@style/TextAppearance.MotionPulse.TitleMedium"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="Requests"
+            android:textSize="16sp"
+            android:visibility="gone" />
 
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rv_manage_friends"
+            android:id="@+id/rv_incoming_requests"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:nestedScrollingEnabled="false" />
-    </com.example.motionpulse.ui.views.StateLayout>
+            android:layout_marginBottom="16dp"
+            android:nestedScrollingEnabled="false"
+            android:visibility="gone" />
 
-</LinearLayout>
+        <TextView
+            style="@style/TextAppearance.MotionPulse.TitleMedium"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:text="Friends"
+            android:textSize="16sp" />
+
+        <com.example.motionpulse.ui.views.StateLayout
+            android:id="@+id/state_layout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_manage_friends"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false" />
+        </com.example.motionpulse.ui.views.StateLayout>
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
