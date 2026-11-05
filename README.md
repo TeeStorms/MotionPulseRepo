@@ -75,13 +75,17 @@ bash
 git clone https://github.com/TeeStorms/MotionPulseRepo/new/main?filename=README.md)
 # Video Link
 https://www.dropbox.com/scl/fi/smfd1vrp9rxvbtd4qttif/WhatsApp-Video-2026-11-05-at-21.53.57.mp4?rlkey=1gao8wzttumh2lwlhpalzi6er&st=hru3ey3w&dl=0
+git clone https://github.com/TeeStorms/MotionPulseRepo
+# Move into the project
+cd motion-pulse
 
 # Install dependencies
-# (replace with your project's command)
-Run the app
-bash
-# (replace with your project's run command)
-Configuration
+Clone the repository
+Open in Android Studio Otter 2025.2.3
+Add your own google-services.json from Firebase Console
+Enable Email/Password Authentication in Firebase Console
+Enable Firestore in Firebase Console
+Build and run on Android device (API 24+)
 
 If the app uses Google sign-in or a backend, add your keys or config files here (for example google-services.json or a .env file). Do not commit secrets.
 
@@ -111,6 +115,7 @@ Charts: Your template mentioned MPAndroidChart. Motion.Pulse uses lightweight, n
 AI/ML: Your template mentioned Google ML Kit Text Recognition. Motion.Pulse does not use ML Kit; instead, it uses Media3 ExoPlayer for media playback and Kotlinx Serialization for data contracts.
 5.
 Architecture: Motion.Pulse uses MVVM with Kotlin Coroutines StateFlow & SharedFlow (modern reactive streams) instead of legacy LiveData.)
+Architecture: Motion.Pulse uses MVVM with Kotlin Coroutines StateFlow & SharedFlow (modern reactive streams) instead of legacy LiveData.
 
 Framework:
 Language:
@@ -130,8 +135,8 @@ License
 
 Add your license here (e.g. MIT).
 
-Zandile Selao 
-Ndabezinhle Mathunyane 
-Matlhogonolo Keebine 
-Tshiamo Mosetlha 
-Muhluri Nkuna 
+Zandile Selao ST10436981
+Ndabezinhle Mathunyane ST10457068
+Matlhogonolo Keebine ST10452412
+Tshiamo Mosetlha ST10451437
+Muhluri Nkuna ST10437226
