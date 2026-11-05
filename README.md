@@ -72,7 +72,7 @@ Android device or emulator
 Installation
 bash
 # Clone the repository
-git clone https://github.com/TeeStorms/MotionPulseRepo/new/main?filename=README.md)
+git clone https://github.com/TeeStorms/MotionPulseRepo
 # Move into the project
 cd motion-pulse
 
