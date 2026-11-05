@@ -89,7 +89,7 @@ Build and run on Android device (API 24+)
 
 If the app uses Google sign-in or a backend, add your keys or config files here (for example google-services.json or a .env file). Do not commit secrets.
 
-Tech Stack
+# Tech Stack
 
 Language: Kotlin (2.1.0)
 IDE: Android Studio
