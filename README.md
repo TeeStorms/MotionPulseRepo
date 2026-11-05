@@ -77,11 +77,12 @@ git clone https://github.com/TeeStorms/MotionPulseRepo
 cd motion-pulse
 
 # Install dependencies
-# (replace with your project's command)
-Run the app
-bash
-# (replace with your project's run command)
-Configuration
+Clone the repository
+Open in Android Studio Otter 2025.2.3
+Add your own google-services.json from Firebase Console
+Enable Email/Password Authentication in Firebase Console
+Enable Firestore in Firebase Console
+Build and run on Android device (API 24+)
 
 If the app uses Google sign-in or a backend, add your keys or config files here (for example google-services.json or a .env file). Do not commit secrets.
 
