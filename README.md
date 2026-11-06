@@ -1,137 +1,232 @@
-Motion.Pulse
+# Motion.Pulse
 
-Build your rhythm.
+**Build your rhythm.**
 
-Motion.Pulse is a mobile habit and mood tracking app that helps you build consistent routines, understand how your habits shape your mood, and stay motivated alongside friends through duels, challenges and leaderboards.
+Motion.Pulse is a native Android habit and mood tracking application designed to help users build consistent routines, understand the relationship between their habits and emotional well-being, and stay motivated alongside friends. 
 
-Version 1.0 · Android
+Built with a focus on offline-first reliability, native performance, and a seamless Material 3 user experience, the app combines local data persistence with cloud synchronization to provide real-time community features, gamified progress, and personal insights.
 
-Features
-Authentication
-Email and password registration and login
-Continue with Google sign-in
-Automatic session check on launch (with a Skip option)
-Forgot password flow
-Change profile name and password from the Profile screen
-Home
-Personalised welcome with your current mood
-Daily progress ring showing habits completed today (e.g. 3/3)
-Motivation of the day
-Today's habits list with completion percentages
-Mood Tracking
-Log your mood on a five-level rhythm scale: Drained, Low, Steady, Good, Energized
-Tag what is shaping your mood: Sleep, Work, Health, Social, Weather
-Add an optional note
-Update your mood any time during the day
-Habits
-Search and filter habits by category (Mind & Focus, Fitness & Health, Daily Routine, and more)
-Add new habits with:
-Category
-Name
-Goal type: Yes / No or Numeric Target
-Reminder time
-Per-habit completion percentage
-Share habits with friends
-Pulse Community
-Feed: milestones and streaks from your friends
-Leaderboard: rank by Weekly XP, Streak or Level
-Duels: challenge a friend to a 7-day head-to-head consistency race
-Group Challenges: join community events such as the Global Consistency Marathon
-Add friends using a personal friend code
-Stats ("Your Rhythm")
-Weekly navigation (e.g. 2 Nov - 8 Nov)
-Habits done today, current streak, total completed and weekly progress vs last week
-Mood and habits side-by-side chart
-Insights and best day of the week
-Profile
-Day streak and badges
-Recent badges
-Shareable friend code (copy, share, reset)
-Preferences:
-Habit reminders
-Share milestones with friends
-Show habit names in posts
-Language selection: English, Afrikaans, Setswana, isiZulu, Xitsonga
-Manage linked accounts
-Export your data as CSV
-Log out and delete account
-Screens
-Screen	Description
-Splash	Branded launch screen with session check
-Login / Register	Email or Google sign-in
-Home	Daily progress and today's habits
-Mood	Rhythm bars, mood factors and notes
-Habits	Search, filter and add habits
-Community	Feed, leaderboard and duels
-Stats	Weekly insights and mood/habit correlation
-Profile	Account, preferences and data tools
-Getting Started
-Prerequisites
-Android device or emulator
-(Add your tooling here, e.g. Android Studio, Flutter SDK, Node.js)
-Installation
-bash
-# Clone the repository
-git clone https://github.com/TeeStorms/MotionPulseRepo
-# Move into the project
-cd motion-pulse
+## 🚀 Features
 
-# Install dependencies
-Clone the repository
-Open in Android Studio Otter 2025.2.3
-Add your own google-services.json from Firebase Console
-Enable Email/Password Authentication in Firebase Console
-Enable Firestore in Firebase Console
-Build and run on Android device (API 24+)
+### Authentication & Security
+- **Flexible Sign-In:** Supports traditional Email/Password authentication alongside Google Sign-In via the Credential Manager API.
+- **Session Management:** Automatically checks for an active session on launch with a "Skip" option for offline or guest usage.
+- **Account Management:** Comprehensive flows for password recovery, profile name changes, and secure account deletion.
 
-If the app uses Google sign-in or a backend, add your keys or config files here (for example google-services.json or a .env file). Do not commit secrets.
+### Dashboard (Home)
+- **Daily Progress:** A custom Canvas-rendered progress ring dynamically tracks and displays the percentage of habits completed for the current day.
+- **Motivation:** Displays a daily motivational quote and personalized user welcome based on the current time and logged mood.
+- **Quick Actions:** Direct access to today's scheduled habits, complete with active streak indicators and completion percentages.
 
-Tech Stack
-Language: Kotlin (2.1.0)
-IDE: Android Studio
-Database: Room DB (2.8.4 - local) + Firebase Cloud Firestore (34.18.0 - cloud)
-Authentication: Firebase Authentication + Google Credential Manager API (1.3.0)
-UI / Layouts: XML Views + ViewBinding + Material 3 Components (1.14.0) (No Jetpack Compose)
-Charts & Custom Views: Custom Android Canvas Graphics (MoodHabitsGraphCardView, DashboardProgressRingView)
-Async & Offline Sync: Kotlin Coroutines + StateFlow / SharedFlow + WorkManager (2.11.2)
-Media / Audio: AndroidX Media3 ExoPlayer (1.5.1)
-Cloud Messaging: Firebase Cloud Messaging (FCM)
-Architecture: MVVM (ViewModel + StateFlow + Repository + Room Single Source of Truth)
-Min SDK: API 26 (Android 8.0)
-Target SDK: API 36 (Android 15)
-Compile SDK: API 37
-Key Differences vs. Your Template String:
-1.
-Min SDK: Your template listed API 24 (Android 7.0). In  app/build.gradle.kts, the actual project setting is minSdk = 26 (Android 8.0).
-2.
-Target SDK: targetSdk = 36 (Android 15) is accurate, and compileSdk = 37.
-3.
-Charts: Your template mentioned MPAndroidChart. Motion.Pulse uses lightweight, native Custom Canvas Graphics (MoodHabitsGraphCardView and DashboardProgressRingView) for pixel-perfect rendering without 3rd-party charting library overhead.
-4.
-AI/ML: Your template mentioned Google ML Kit Text Recognition. Motion.Pulse does not use ML Kit; instead, it uses Media3 ExoPlayer for media playback and Kotlinx Serialization for data contracts.
-5.
-Architecture: Motion.Pulse uses MVVM with Kotlin Coroutines StateFlow & SharedFlow (modern reactive streams) instead of legacy LiveData.
+### Mood Tracking
+- **Rhythm Scale:** Users log their state on a five-level scale (Drained, Low, Steady, Good, Energized).
+- **Contextual Tagging:** Associates moods with specific factors like Sleep, Work, Health, Social, and Weather.
+- **Journaling:** Allows users to attach optional notes to their daily mood entries.
 
-Framework:
-Language:
-Backend / Database:
-Authentication: Email/password and Google Sign-In
-Notifications: Local habit reminders
-Roadmap
- Badge and achievement system
- Habit streak recovery
- More languages
- iOS support
-Contributing
+### Habit Management
+- **Flexible Scheduling:** Habits can be configured with custom categories, reminder times, and goal types (Yes/No completion or Numeric Targets).
+- **Search & Filtering:** A real-time search and category filter system (Mind & Focus, Fitness & Health, Daily Routine) allows users to quickly find specific habits.
+- **Habit Strength:** Calculates a completion percentage (Habit Strength) for each habit based on historical consistency.
 
-Contributions are welcome. Fork the repo, create a feature branch, and open a pull request.
+### Pulse Community
+- **Activity Feed:** A real-time feed displaying milestones, completed habits, and streaks from accepted friends.
+- **Leaderboards:** Competitive rankings by Weekly XP, Current Streak, or Level.
+- **Duels:** Allows users to challenge friends to a 7-day head-to-head consistency race, with live score tracking.
+- **Friend System:** Secure friend connections using unique, generated personal codes (e.g., `MP-XXXX-XXXX`) with built-in rate-limiting and blocking features.
 
-License
+### Stats ("Your Rhythm")
+- **Weekly Overview:** Displays aggregated data including habits done today, current streak, and total completed habits vs. the previous week.
+- **Custom Data Visualization:** Utilizes custom Android Canvas graphics (`MoodHabitsGraphCardView`) to render side-by-side correlations between mood fluctuations and habit completion without relying on heavy third-party charting libraries.
+- **Insights:** Automatically calculates and highlights the user's best day of the week based on completion rates.
 
-Add your license here (e.g. MIT).
+### Profile & Data
+- **Preferences:** Toggles for habit reminders, sharing milestones with friends, and hiding habit names in public posts.
+- **Localization:** Full UI translation support for English, Afrikaans, Setswana, isiZulu, and Xitsonga.
+- **Data Portability:** One-tap export of all local habit data to CSV format.
+- **Linked Accounts:** Management interface for linking or unlinking Google and Email providers.
 
-Zandile Selao ST10436981
-Ndabezinhle Mathunyane ST10457068
-Matlhogonolo Keebine ST10452412
-Tshiamo Mosetlha ST10451437
-Muhluri Nkuna ST10437226
+---
+
+## 🏗 Architecture & Tech Stack
+
+Motion.Pulse is built using **Modern Android Development (MAD)** principles, favoring native components and reactive streams over third-party abstractions.
+
+### Core Stack
+- **Language:** Kotlin (2.1.0)
+- **UI Framework:** XML Views + ViewBinding + Material 3 Components (No Jetpack Compose)
+- **Architecture Pattern:** MVVM (Model-View-ViewModel)
+- **State Management:** Kotlin Coroutines, `StateFlow`, and `SharedFlow`
+
+### Local & Cloud Data
+- **Local Database:** Room DB (Single Source of Truth)
+- **Cloud Database:** Firebase Cloud Firestore
+- **Offline Sync:** WorkManager handles background synchronization, ensuring data integrity even when the device is offline.
+- **Data Contracts:** Kotlinx Serialization for parsing and mapping complex data structures.
+
+### Custom Rendering & Media
+- **Charts & Graphics:** Custom Android Canvas implementations (`MoodHabitsGraphCardView`, `DashboardProgressRingView`) for pixel-perfect, highly performant rendering.
+- **Media Playback:** AndroidX Media3 ExoPlayer for audio/video integrations.
+
+### Environment
+- **Min SDK:** API 26 (Android 8.0)
+- **Target SDK:** API 36 (Android 15)
+- **Compile SDK:** API 37
+- **IDE:** Android Studio (Otter 2025.2.3 or newer)
+
+---
+
+## 📂 Project Structure
+
+The codebase is organized by feature and layer, adhering to Clean Architecture principles:
+
+```text
+com.example.motionpulse
+│
+├── MainActivity.kt                            # Main Navigation Host Activity
+│
+├── data
+│   ├── export
+│   │   └── CsvExportManager.kt               # Exports local Room data to CSV files
+│   │
+│   ├── local
+│   │   ├── AppDatabase.kt                    # Room Database initialization & migrations
+│   │   ├── Converters.kt                     # Room TypeConverters (Date, List, Map, Instant)
+│   │   ├── dao                               # Data Access Objects for Room Queries
+│   │   │   ├── BadgeDao.kt
+│   │   │   ├── FriendDao.kt
+│   │   │   ├── HabitCompletionDao.kt
+│   │   │   ├── HabitDao.kt
+│   │   │   ├── MoodDao.kt
+│   │   │   └── UserProfileDao.kt
+│   │   └── entity                            # Local Room Entities
+│   │       ├── ActivityFeedEntry.kt
+│   │       ├── BadgeEntity.kt
+│   │       ├── Challenge.kt
+│   │       ├── CommunityNotification.kt
+│   │       ├── Duel.kt
+│   │       ├── FriendEntity.kt
+│   │       ├── HabitCompletionEntity.kt
+│   │       ├── HabitEntity.kt
+│   │       ├── MoodEntity.kt
+│   │       ├── PublicProfileEntity.kt
+│   │       └── UserProfileEntity.kt
+│   │
+│   ├── repository                            # Data Repositories (Room + Firestore)
+│   │   ├── AuthRepository.kt                 # Auth & Profile Firestore sync
+│   │   ├── CommunityPreferences.kt          # Shared Preferences for tips/nudges
+│   │   ├── CommunityRepository.kt           # Feed, Leaderboards, Duels, Friends Firestore API
+│   │   ├── FriendCodeDataSource.kt          # Friend Code lookups & batch mapping
+│   │   ├── GoogleAuthUiClient.kt            # Google Credential Manager integration
+│   │   ├── HabitRepository.kt               # Habit & Completion Firestore sync
+│   │   ├── MoodRepository.kt                # Mood check-in Firestore sync
+│   │   ├── PreferenceRepository.kt          # User settings preferences
+│   │   └── SettingsRepository.kt            # Offline/online settings sync
+│   │
+│   └── sync
+│       └── HabitSyncWorker.kt                # WorkManager background sync worker
+│
+├── domain
+│   ├── auth                                  # Authentication State & ViewModel
+│   │   ├── AuthState.kt
+│   │   ├── AuthViewModel.kt
+│   │   └── UserData.kt
+│   │
+│   ├── models                                # Pure Kotlin Domain Models
+│   │   ├── FrequencyConfig.kt
+│   │   ├── FriendCodeUiState.kt
+│   │   ├── FriendEligibility.kt
+│   │   ├── FriendLookupResult.kt
+│   │   ├── FriendRelationshipState.kt
+│   │   ├── FriendRequestState.kt
+│   │   ├── ReminderScheduler.kt
+│   │   ├── UiState.kt
+│   │   ├── UserSettings.kt
+│   │   └── WeeklyRhythmModels.kt
+│   │
+│   ├── scoring                               # Business Rules & Gamification Algorithms
+│   │   ├── GamificationEngine.kt            # XP, Level & Badge calculation
+│   │   ├── HabitScoreCalculator.kt          # Habit strength score calculation
+│   │   ├── MoodHabitInsightGenerator.kt     # Mood & Habit correlation insights
+│   │   └── StreakCalculator.kt              # Current & Longest streak calculation
+│   │
+│   ├── stats                                 # Statistical Calculations
+│   │   ├── StatsCalculations.kt
+│   │   └── WeeklyCorrelationData.kt
+│   │
+│   └── usecase                               # Domain Use Cases
+│       └── CompleteHabitUseCase.kt          # Central UseCase for Habit Completion
+│
+├── ui
+│   ├── adapters                              # RecyclerView Adapters
+│   │   ├── BadgesAdapter.kt
+│   │   ├── CommunityFeedAdapter.kt
+│   │   ├── CompletionHistoryAdapter.kt
+│   │   ├── DuelsAdapter.kt
+│   │   ├── HabitsAdapter.kt
+│   │   ├── IncomingRequestsAdapter.kt
+│   │   ├── LeaderboardAdapter.kt
+│   │   ├── LinkedAccountsAdapter.kt
+│   │   ├── ManageFriendsAdapter.kt
+│   │   ├── NotificationsAdapter.kt
+│   │   └── SentRequestsAdapter.kt
+│   │
+│   ├── dialogs                               # Bottom Sheets & Dialog Fragments
+│   │   ├── AddFriendBottomSheetDialogFragment.kt
+│   │   ├── AddHabitBottomSheetDialogFragment.kt
+│   │   ├── ExportDataBottomSheetDialogFragment.kt
+│   │   ├── LinkedAccountsBottomSheetDialogFragment.kt
+│   │   ├── ManageFriendsBottomSheetDialogFragment.kt
+│   │   └── NotificationsBottomSheetDialogFragment.kt
+│   │
+│   ├── fragments                             # Screen UI Fragments (XML ViewBinding)
+│   │   ├── BadgesGalleryFragment.kt
+│   │   ├── CommunityFeedFragment.kt
+│   │   ├── CommunityFragment.kt
+│   │   ├── DashboardFragment.kt             # Home / Dashboard
+│   │   ├── DuelsFragment.kt
+│   │   ├── EmailVerificationFragment.kt
+│   │   ├── HabitDetailFragment.kt
+│   │   ├── HabitsFragment.kt                # Habits List
+│   │   ├── LandingFragment.kt
+│   │   ├── LeaderboardFragment.kt
+│   │   ├── LoginFragment.kt
+│   │   ├── MoodFragment.kt                 # Mood Check-in
+│   │   ├── OnboardingFragment.kt
+│   │   ├── ProfileFragment.kt              # Profile & Settings
+│   │   ├── RegisterFragment.kt
+│   │   └── StatsFragment.kt                # Stats & Insights
+│   │
+│   ├── notifications                         # AlarmManager & FCM Receivers
+│   │   ├── HabitActionReceiver.kt
+│   │   ├── HabitReminderReceiver.kt
+│   │   ├── MotionPulseMessagingService.kt
+│   │   └── ReminderManager.kt
+│   │
+│   ├── viewmodels                            # UI State ViewModels
+│   │   ├── CommunityViewModel.kt
+│   │   ├── HabitsViewModel.kt
+│   │   ├── MoodViewModel.kt
+│   │   ├── ProfileViewModel.kt
+│   │   └── StatsViewModel.kt
+│   │
+│   └── views                                 # Custom Android Views
+│       ├── DashboardProgressRingView.kt
+│       ├── DropletHeaderView.kt
+│       ├── MoodBarsView.kt
+│       ├── MoodHabitsGraphCardView.kt
+│       ├── MoodPillView.kt
+│       ├── MotionPulseBottomNav.kt
+│       ├── StateLayout.kt
+│       └── UserAvatarView.kt
+│
+└── util                                      # Utilities & Helpers
+    ├── AppConstants.kt
+    ├── ChromeFontScaleHelper.kt
+    ├── ConnectivityMonitor.kt
+    ├── FeedTextFormatter.kt
+    ├── FriendCodeUtil.kt
+    ├── HabitStrengthFormatter.kt
+    ├── HapticHelper.kt
+    ├── LocaleHelper.kt
+    ├── TimeAgoFormatter.kt
+    └── ValidationUtils.kt
