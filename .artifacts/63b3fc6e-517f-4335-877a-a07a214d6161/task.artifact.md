@@ -1,11 +1,11 @@
-# Task List - Scope-Restricted Localization (Home, Mood, Community, Stats)
+# Task List - Profile Self-Healing & Sign-In Verification
 
-- [ ] 1. Create `docs/translations/scope.txt` with in-scope keys for Home, Mood, Community, Stats
-- [ ] 2. Extract in-scope strings into `res/values/strings.xml` and update layouts (`fragment_dashboard.xml`, `fragment_mood.xml`, `fragment_duels.xml`, `fragment_stats.xml`, `item_duel.xml`)
-- [ ] 3. Update `tools/translate-strings.mjs` to filter translation keys by `docs/translations/scope.txt`
-- [ ] 4. Implement `MoodFactor.labelRes` and `MoodLevel.labelRes` enum mapping functions
-- [ ] 5. Run `node tools/translate-strings.mjs --dry-run` and paste raw output
+- [ ] 1. Add `ensureProfileForUser(user: FirebaseUser)` to `AuthRepository.kt`
+- [ ] 2. Call `authRepository.ensureProfileForUser(user)` in `AuthViewModel.kt` after sign-in
+- [ ] 3. Replace `sendFriendRequest` and `acceptRequest` in `CommunityRepository.kt` with self-healing implementations
+- [ ] 4. Confirm `firestore.rules` `friendRequests` rules
+- [ ] 5. Run `npx firebase emulators:exec --only firestore "npm test"` and paste raw output
 - [ ] 6. Run `./gradlew testDebugUnitTest` and paste raw output
 - [ ] 7. Run `./gradlew assembleDebug` and paste raw output
-- [ ] 8. Run `./gradlew lintDebug` and paste raw output
+- [ ] 8. Deploy rules to Firebase (`npx firebase deploy --only firestore:rules,firestore:indexes --project pulse-702e8 --non-interactive`)
 - [ ] 9. Create `walkthrough.artifact.md`
