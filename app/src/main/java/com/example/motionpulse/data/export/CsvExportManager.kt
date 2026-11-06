@@ -78,71 +78,64 @@ class CsvExportManager(private val context: Context) {
         val zipFile = File(exportDir, "motionpulse_export_$dateStr.zip")
 
         ZipOutputStream(BufferedOutputStream(FileOutputStream(zipFile))).use { zos ->
-            val writer = BufferedWriter(java.io.OutputStreamWriter(zos, Charsets.UTF_8))
-            
-            // UTF-8 BOM
-            writer.write("\uFEFF")
 
-            if (options.includeHabits && habits.isNotEmpty()) {
-                zos.putNextEntry(ZipEntry("habits.csv"))
-                writer.write("ID,Title,Category,GoalType,Target,Unit,Frequency,ReminderTime,CreatedAt,Archived\n")
-                habits.forEach { h ->
-                    val line = listOf(h.id, h.title, h.category, h.goalType.name, h.numericTarget?.toString() ?: "", h.numericUnit ?: "", h.frequencyType.name, h.reminderTime ?: "", h.createdAt.toString(), h.isArchived.toString())
-                        .joinToString(",") { escapeCsvCell(it) } + "\n"
-                    writer.write(line)
+            fun writeCsvFile(entryName: String, headers: List<String>, rows: List<List<String>>) {
+                zos.putNextEntry(ZipEntry(entryName))
+                // Use UTF-8 BOM so Excel reads special characters
+                val writer = BufferedWriter(java.io.OutputStreamWriter(zos, Charsets.UTF_8))
+                writer.write("\uFEFF")
+                // Excel specific separator to force column splitting
+                writer.write("sep=,\n")
+
+                writer.write(headers.joinToString(",") { escapeCsvCell(it) } + "\n")
+                rows.forEach { row ->
+                    writer.write(row.joinToString(",") { escapeCsvCell(it) } + "\n")
                 }
                 writer.flush()
                 zos.closeEntry()
+            }
+
+            if (options.includeHabits && habits.isNotEmpty()) {
+                val headers = listOf("ID", "Title", "Category", "Goal Type", "Target", "Unit", "Frequency", "Reminder Time", "Created At", "Archived")
+                val rows = habits.map { h ->
+                    listOf(h.id, h.title, h.category, h.goalType.name, h.numericTarget?.toString() ?: "", h.numericUnit ?: "", h.frequencyType.name, h.reminderTime ?: "", h.createdAt.toString(), h.isArchived.toString())
+                }
+                writeCsvFile("habits.csv", headers, rows)
             }
 
             if (options.includeCompletions && filteredCompletions.isNotEmpty()) {
-                zos.putNextEntry(ZipEntry("completions.csv"))
-                writer.write("Date,HabitId,Status,Value\n")
-                filteredCompletions.forEach { c ->
-                    val line = listOf(c.date.toString(), c.habitId, c.status.name, c.numericValueLogged?.toString() ?: "")
-                        .joinToString(",") { escapeCsvCell(it) } + "\n"
-                    writer.write(line)
+                val headers = listOf("Date", "Habit ID", "Status", "Value")
+                val rows = filteredCompletions.map { c ->
+                    listOf(c.date.toString(), c.habitId, c.status.name, c.numericValueLogged?.toString() ?: "")
                 }
-                writer.flush()
-                zos.closeEntry()
+                writeCsvFile("completions.csv", headers, rows)
             }
 
             if (options.includeMoods && filteredMoods.isNotEmpty()) {
-                zos.putNextEntry(ZipEntry("moods.csv"))
-                writer.write("Date,Level,Factors,Note\n")
-                filteredMoods.forEach { m ->
-                    val line = listOf(m.date.toString(), m.moodLevel.name, m.factors.joinToString(";"), m.note ?: "")
-                        .joinToString(",") { escapeCsvCell(it) } + "\n"
-                    writer.write(line)
+                val headers = listOf("Date", "Level", "Factors", "Note")
+                val rows = filteredMoods.map { m ->
+                    listOf(m.date.toString(), m.moodLevel.name, m.factors.joinToString(";"), m.note ?: "")
                 }
-                writer.flush()
-                zos.closeEntry()
+                writeCsvFile("moods.csv", headers, rows)
             }
 
             if (options.includeBadges && filteredBadges.isNotEmpty()) {
-                zos.putNextEntry(ZipEntry("badges.csv"))
-                writer.write("Type,UnlockedAt\n")
-                filteredBadges.forEach { b ->
-                    val line = listOf(b.badgeType.name, b.unlockedAt.toString())
-                        .joinToString(",") { escapeCsvCell(it) } + "\n"
-                    writer.write(line)
+                val headers = listOf("Type", "Unlocked At")
+                val rows = filteredBadges.map { b ->
+                    listOf(b.badgeType.name, b.unlockedAt.toString())
                 }
-                writer.flush()
-                zos.closeEntry()
+                writeCsvFile("badges.csv", headers, rows)
             }
 
             if (options.includeProfile && profile != null) {
-                zos.putNextEntry(ZipEntry("profile.csv"))
-                writer.write("DisplayName,Level,XP,CurrentStreak,CreatedAt\n")
-                val line = listOf(profile.displayName, profile.currentLevel.toString(), profile.totalAuraXp.toString(), profile.currentStreak.toString(), profile.createdAt.toString())
-                    .joinToString(",") { escapeCsvCell(it) } + "\n"
-                writer.write(line)
-                writer.flush()
-                zos.closeEntry()
+                val headers = listOf("Display Name", "Level", "XP", "Current Streak", "Created At")
+                val rows = listOf(listOf(profile.displayName, profile.currentLevel.toString(), profile.totalAuraXp.toString(), profile.currentStreak.toString(), profile.createdAt.toString()))
+                writeCsvFile("profile.csv", headers, rows)
             }
 
             // README.txt
             zos.putNextEntry(ZipEntry("README.txt"))
+            val writer = BufferedWriter(java.io.OutputStreamWriter(zos, Charsets.UTF_8))
             writer.write("Motion.Pulse Data Export\nGenerated on: $dateStr\nContains CSV exports of your habits, completions, moods, badges, and profile summary.\n")
             writer.flush()
             zos.closeEntry()
