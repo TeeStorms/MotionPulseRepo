@@ -5,6 +5,7 @@ import com.example.motionpulse.data.local.entity.CompletionStatus
 import com.example.motionpulse.data.local.entity.HabitCompletionEntity
 import com.example.motionpulse.data.local.entity.HabitEntity
 import com.example.motionpulse.data.repository.AuthRepository
+import com.example.motionpulse.data.repository.CommunityRepository
 import com.example.motionpulse.domain.scoring.GamificationEngine
 import com.example.motionpulse.domain.scoring.HabitScoreCalculator
 import com.example.motionpulse.domain.scoring.StreakCalculator
@@ -17,7 +18,8 @@ import java.util.UUID
 class CompleteHabitUseCase(
     private val db: AppDatabase,
     private val userId: String,
-    private val authRepository: AuthRepository = AuthRepository()
+    private val authRepository: AuthRepository = AuthRepository(),
+    private val communityRepository: CommunityRepository = CommunityRepository()
 ) {
     suspend fun execute(habit: HabitEntity, date: LocalDate = LocalDate.now()): HabitEntity {
         val completionDao = db.habitCompletionDao()
@@ -58,9 +60,9 @@ class CompleteHabitUseCase(
         habitDao.updateHabit(updatedHabit)
 
         val todayStr = date.toString()
+        val profile = profileDao.getProfile(userId).first()
 
         if (newStatus == CompletionStatus.COMPLETED) {
-            val profile = profileDao.getProfile(userId).first()
             if (profile != null) {
                 val allActiveHabits = habitDao.getHabitsForUser(userId).first()
                 val maxStreak = allActiveHabits.maxOfOrNull { it.currentStreak } ?: 0
@@ -86,9 +88,24 @@ class CompleteHabitUseCase(
                     "recentXp.$todayStr" to com.google.firebase.firestore.FieldValue.increment(xpResult.auraXpGained)
                 )
                 authRepository.updateUserProfileFields(userId, firestoreUpdates)
+
+                if (profile.shareMilestonesWithFriends) {
+                    val friends = db.friendDao().getActiveFriendsForUser(userId).first()
+                    val friendIds = friends.map { if (it.requesterUid == userId) it.recipientUid else it.requesterUid }
+                    val entryId = "${habit.id}_${todayStr}"
+                    val habitNameToShare = if (profile.showHabitNamesInPosts) habit.title else "a habit"
+
+                    communityRepository.postAchievementToFeed(
+                        entryId = entryId,
+                        actorId = userId,
+                        actorName = profile.displayName.ifBlank { "User" },
+                        habitName = habitNameToShare,
+                        type = "HABIT_COMPLETED",
+                        visibleTo = friendIds + userId
+                    )
+                }
             }
         } else {
-            val profile = profileDao.getProfile(userId).first()
             if (profile != null) {
                 val allActiveHabits = habitDao.getHabitsForUser(userId).first()
                 val maxStreak = allActiveHabits.maxOfOrNull { it.currentStreak } ?: 0
@@ -116,6 +133,9 @@ class CompleteHabitUseCase(
                     "recentXp.$todayStr" to newXpForToday
                 )
                 authRepository.updateUserProfileFields(userId, firestoreUpdates)
+
+                val entryId = "${habit.id}_${todayStr}"
+                communityRepository.deleteAchievementFromFeed(entryId)
             }
         }
 

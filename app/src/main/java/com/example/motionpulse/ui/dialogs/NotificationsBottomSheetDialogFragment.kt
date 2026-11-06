@@ -75,7 +75,7 @@ class NotificationsBottomSheetDialogFragment : BottomSheetDialogFragment() {
                                 CommunityViewModel.Factory(db, uid, requireContext())
                             )[CommunityViewModel::class.java]
 
-                            setupNotificationsContent(communityViewModel)
+                            setupNotificationsContent(communityViewModel, uid)
                         }
                     }
                 }
@@ -83,17 +83,17 @@ class NotificationsBottomSheetDialogFragment : BottomSheetDialogFragment() {
         }
     }
 
-    private fun setupNotificationsContent(viewModel: CommunityViewModel) {
+    private fun setupNotificationsContent(viewModel: CommunityViewModel, currentUserId: String) {
         viewModel.cleanupOldNotifications()
 
         notificationsAdapter = NotificationsAdapter(
             onAcceptFriend = { notif ->
+                // The requestId is the same as the notification id
                 viewModel.respondToRequest(notif.id, notif.senderId, true)
-                Toast.makeText(requireContext(), "Friend request accepted", Toast.LENGTH_SHORT).show()
             },
             onDeclineFriend = { notif ->
+                // The requestId is the same as the notification id
                 viewModel.respondToRequest(notif.id, notif.senderId, false)
-                Toast.makeText(requireContext(), "Friend request declined", Toast.LENGTH_SHORT).show()
             }
         )
 
@@ -129,6 +129,16 @@ class NotificationsBottomSheetDialogFragment : BottomSheetDialogFragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    // Observe nudgeFeedback (which is now used for accept/decline feedback)
+                    viewModel.nudgeFeedback.collectLatest { msg ->
+                        if (!msg.isNullOrBlank()) {
+                            Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
+                            viewModel.clearNudgeFeedback()
+                        }
+                    }
+                }
+
                 launch {
                     viewModel.notificationsState.collectLatest { state ->
                         when (state) {
