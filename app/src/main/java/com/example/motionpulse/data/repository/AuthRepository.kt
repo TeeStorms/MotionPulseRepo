@@ -228,6 +228,54 @@ class AuthRepository(
         }
     }
 
+    /**
+     * Ensures users/{uid} and publicProfiles/{uid} exist for the given Firebase user.
+     * Safe to call on every login (including Google Sign-In). Idempotent.
+     */
+    suspend fun ensureProfileForUser(user: FirebaseUser) {
+        val uid = user.uid
+        val displayName = user.displayName?.takeIf { it.isNotBlank() }
+            ?: user.email?.substringBefore("@")?.takeIf { it.isNotBlank() }
+            ?: "User"
+        val email = user.email ?: ""
+
+        val usersRef = firestore.collection("users").document(uid)
+        val publicRef = firestore.collection("publicProfiles").document(uid)
+
+        // 1) Create users/{uid} if it doesn't exist
+        val usersSnap = try { usersRef.get().await() } catch (e: Exception) { null }
+        if (usersSnap == null || !usersSnap.exists()) {
+            val profile = hashMapOf(
+                "uid" to uid,
+                "displayName" to displayName,
+                "email" to email,
+                "totalAuraXp" to 0L,
+                "currentLevel" to 1,
+                "currentStreak" to 0,
+                "language" to "English",
+                "remindersEnabled" to true,
+                "shareMilestonesWithFriends" to true,
+                "showHabitNamesInPosts" to false,
+                "createdAt" to com.google.firebase.firestore.FieldValue.serverTimestamp()
+            )
+            try { usersRef.set(profile).await() } catch (_: Exception) {}
+        }
+
+        // 2) Create publicProfiles/{uid} if it doesn't exist
+        val publicSnap = try { publicRef.get().await() } catch (e: Exception) { null }
+        if (publicSnap == null || !publicSnap.exists()) {
+            val publicDoc = hashMapOf(
+                "uid" to uid,
+                "displayName" to displayName,
+                "totalAuraXp" to 0L,
+                "currentLevel" to 1,
+                "currentStreak" to 0,
+                "recentXp" to emptyMap<String, Long>()
+            )
+            try { publicRef.set(publicDoc).await() } catch (_: Exception) {}
+        }
+    }
+
     suspend fun resetFriendCode(uid: String, oldCode: String?): String {
         val newCode = generateNewFriendCode()
         try {

@@ -132,6 +132,7 @@ class AuthViewModel(
                         try {
                             withTimeout(4000L) {
                                 authRepository.syncUserProfile(user)
+                                authRepository.ensureProfileForUser(user)
                             }
                             _isSyncingFailed.value = false
                         } catch (e: Exception) {
@@ -164,6 +165,7 @@ class AuthViewModel(
                     try {
                         withTimeout(4000L) {
                             authRepository.syncUserProfile(user)
+                            authRepository.ensureProfileForUser(user)
                         }
                         _isSyncingFailed.value = false
                     } catch (e: Exception) {
