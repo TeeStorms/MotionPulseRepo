@@ -132,7 +132,11 @@ service cloud.firestore {
 
     // Activity Feed (Friends-only audience model)
     match /activityFeed/{entryId} {
-      allow read: if request.auth != null && ('visibleTo' in resource.data) && (request.auth.uid in resource.data.visibleTo);
+      // Owner can read any doc they created (needed for the "unfriend" cleanup query)
+      allow get, list: if request.auth != null && (
+        (('visibleTo' in resource.data) && (request.auth.uid in resource.data.visibleTo)) ||
+        (('actorId' in resource.data) && (resource.data.actorId == request.auth.uid))
+      );
 
       allow create: if request.auth != null
                     && request.resource.data.actorId == request.auth.uid
