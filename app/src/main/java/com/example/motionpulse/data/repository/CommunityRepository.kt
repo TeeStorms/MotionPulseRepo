@@ -1,12 +1,12 @@
 package com.example.motionpulse.data.repository
 
 import android.util.Log
+import com.example.motionpulse.data.local.AppDatabase
 import com.example.motionpulse.data.local.entity.ActivityFeedEntry
 import com.example.motionpulse.data.local.entity.Challenge
 import com.example.motionpulse.data.local.entity.CommunityNotification
 import com.example.motionpulse.data.local.entity.Duel
 import com.example.motionpulse.data.local.entity.FeedEventType
-import com.example.motionpulse.data.local.AppDatabase
 import com.example.motionpulse.data.local.entity.UserProfileEntity
 import com.example.motionpulse.domain.models.ErrorKind
 import com.example.motionpulse.domain.models.UiState
@@ -18,11 +18,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
@@ -37,41 +37,27 @@ class CommunityRepository(
     }
 
     private fun logFirestoreError(path: String, queryDesc: String, error: FirebaseFirestoreException) {
-        Log.w(
-            "FirestoreError",
-            "Path: '$path' | Query: '$queryDesc' | Code: ${error.code} | Message: ${error.message}",
-            error
-        )
+        Log.w("FirestoreError", "Path: '$path' | Query: '$queryDesc' | Code: ${error.code} | Message: ${error.message}", error)
     }
 
+    // ───────── FEED ─────────
     fun getActivityFeed(userId: String): Flow<UiState<List<ActivityFeedEntry>>> = callbackFlow {
-        if (userId.isEmpty()) {
-            trySend(UiState.Empty)
-            close()
-            return@callbackFlow
-        }
+        if (userId.isEmpty()) { trySend(UiState.Empty); close(); return@callbackFlow }
         trySend(UiState.Loading)
-        val subscription = firestore.collection("activityFeed")
+        val sub = firestore.collection("activityFeed")
             .whereArrayContains("visibleTo", userId)
             .orderBy("timestamp", Query.Direction.DESCENDING)
             .limit(30)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    logFirestoreError("activityFeed", "getActivityFeed (whereArrayContains visibleTo $userId, limit 30)", error)
-                    val kind = mapFirestoreError(error)
-                    trySend(UiState.Error(kind, error.message ?: "Failed to load activity feed", error))
+            .addSnapshotListener { snap, err ->
+                if (err != null) {
+                    logFirestoreError("activityFeed", "getActivityFeed", err)
+                    trySend(UiState.Error(mapFirestoreError(err), err.message ?: "Failed", err))
                     return@addSnapshotListener
                 }
-                if (snapshot != null) {
-                    val entries = snapshot.documents.mapNotNull { it.toObject(ActivityFeedEntry::class.java)?.copy(id = it.id) }
-                    if (entries.isEmpty()) {
-                        trySend(UiState.Empty)
-                    } else {
-                        trySend(UiState.Success(entries))
-                    }
-                }
+                val entries = snap?.documents?.mapNotNull { it.toObject(ActivityFeedEntry::class.java)?.copy(id = it.id) } ?: emptyList()
+                trySend(if (entries.isEmpty()) UiState.Empty else UiState.Success(entries))
             }
-        awaitClose { subscription.remove() }
+        awaitClose { sub.remove() }
     }
 
     suspend fun postFeedEntry(entry: ActivityFeedEntry) {
@@ -81,530 +67,318 @@ class CommunityRepository(
             FeedEventType.STREAK_MILESTONE -> "${entry.actorId}_STREAK_${entry.streakCount ?: 0}"
             FeedEventType.STREAK_AT_RISK -> "${entry.actorId}_STREAK_AT_RISK_$dayBucket"
         }
-
         val friendUids = try {
-            val friendsSnapshot = firestore.collection("friendRequests")
-                .whereArrayContains("participants", entry.actorId)
-                .get().await()
-
-            friendsSnapshot.documents
-                .filter { it.getString("status") == "ACCEPTED" }
-                .mapNotNull { doc ->
-                    val parts = doc.get("participants") as? List<*> ?: emptyList<Any>()
-                    parts.find { it != entry.actorId } as? String
-                }
-        } catch (e: Exception) {
-            emptyList()
-        }
-
+            firestore.collection("friendRequests").whereArrayContains("participants", entry.actorId).get().await()
+                .documents.filter { it.getString("status") == "ACCEPTED" }
+                .mapNotNull { d -> (d.get("participants") as? List<*>)?.find { it != entry.actorId } as? String }
+        } catch (_: Exception) { emptyList() }
         val audience = (listOf(entry.actorId) + friendUids).distinct()
-        val entryWithAudience = entry.copy(id = entryId, visibleTo = audience)
-        try {
-            firestore.collection("activityFeed").document(entryId).set(entryWithAudience).await()
-        } catch (e: Exception) {
-            android.util.Log.i("CommunityRepository", "Feed entry already exists or denied: ${e.message}")
-        }
+        try { firestore.collection("activityFeed").document(entryId).set(entry.copy(id = entryId, visibleTo = audience)).await() } catch (_: Exception) {}
     }
 
     suspend fun cleanupDuplicateFeedEntries(userId: String) {
         try {
-            val snapshot = firestore.collection("activityFeed")
-                .whereArrayContains("visibleTo", userId)
-                .get()
-                .await()
-
-            val docsByEventAndDate = mutableMapOf<String, MutableList<com.google.firebase.firestore.DocumentSnapshot>>()
-            for (doc in snapshot.documents) {
-                if (doc.getString("actorId") != userId) continue
-                val eventType = doc.getString("eventType") ?: continue
-                val timestamp = doc.getLong("timestamp") ?: 0L
-                val date = java.time.Instant.ofEpochMilli(timestamp).atZone(java.time.ZoneOffset.UTC).toLocalDate().toString()
-                val key = "${eventType}_$date"
-                docsByEventAndDate.getOrPut(key) { mutableListOf() }.add(doc)
+            val snap = firestore.collection("activityFeed").whereArrayContains("visibleTo", userId).get().await()
+            val grouped = mutableMapOf<String, MutableList<com.google.firebase.firestore.DocumentSnapshot>>()
+            snap.documents.forEach { d ->
+                if (d.getString("actorId") != userId) return@forEach
+                val type = d.getString("eventType") ?: return@forEach
+                val date = java.time.Instant.ofEpochMilli(d.getLong("timestamp") ?: 0L).atZone(java.time.ZoneOffset.UTC).toLocalDate().toString()
+                grouped.getOrPut("${type}_$date") { mutableListOf() }.add(d)
             }
-
-            for ((_, docs) in docsByEventAndDate) {
-                if (docs.size > 1) {
-                    docs.sortByDescending { it.getLong("timestamp") ?: 0L }
-                    for (i in 1 until docs.size) {
-                        docs[i].reference.delete().await()
-                    }
+            grouped.values.forEach { list ->
+                if (list.size > 1) {
+                    list.sortByDescending { it.getLong("timestamp") ?: 0L }
+                    (1 until list.size).forEach { list[it].reference.delete().await() }
                 }
             }
-        } catch (e: Exception) {
-            android.util.Log.e("CommunityRepository", "Error cleaning up duplicate feed entries", e)
-        }
+        } catch (_: Exception) {}
     }
 
     suspend fun toggleReaction(entryId: String, userId: String) {
-        val docRef = firestore.collection("activityFeed").document(entryId)
-        firestore.runTransaction { transaction ->
-            val snapshot = transaction.get(docRef)
-            val reactions = snapshot.get("reactions") as? MutableMap<String, Boolean> ?: mutableMapOf()
-            if (reactions[userId] == true) {
-                reactions.remove(userId)
-            } else {
-                reactions[userId] = true
-            }
-            transaction.update(docRef, "reactions", reactions)
+        val ref = firestore.collection("activityFeed").document(entryId)
+        firestore.runTransaction { txn ->
+            val snap = txn.get(ref)
+            val reactions = (snap.get("reactions") as? MutableMap<String, Boolean>) ?: mutableMapOf()
+            if (reactions[userId] == true) reactions.remove(userId) else reactions[userId] = true
+            txn.update(ref, "reactions", reactions)
         }.await()
     }
 
+    // ───────── NUDGES ─────────
     suspend fun sendNudge(targetUserId: String, senderId: String, senderName: String) {
-        val dayBucket = java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString()
-        val notifId = "nudge_${senderId}_${targetUserId}_${dayBucket}"
-        val notification = CommunityNotification(
-            id = notifId,
-            senderId = senderId,
-            senderName = senderName,
-            type = "NUDGE",
-            timestamp = System.currentTimeMillis(),
-            isRead = false,
-            message = "$senderName nudged you! Keep your streak going."
-        )
-        firestore.collection("users").document(targetUserId)
-            .collection("notifications").document(notifId)
-            .set(notification).await()
+        val day = java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString()
+        val id = "nudge_${senderId}_${targetUserId}_$day"
+        val n = CommunityNotification(id = id, senderId = senderId, senderName = senderName, type = "NUDGE",
+            timestamp = System.currentTimeMillis(), isRead = false,
+            message = "$senderName nudged you! Keep your streak going.")
+        firestore.collection("users").document(targetUserId).collection("notifications").document(id).set(n).await()
     }
 
+    // ───────── BLOCKS ─────────
     suspend fun blockUser(userId: String, blockedUserId: String) {
-        val blockData = mapOf(
-            "blockedUid" to blockedUserId,
-            "blockedAt" to FieldValue.serverTimestamp()
-        )
-        firestore.collection("users").document(userId)
-            .collection("blocks").document(blockedUserId)
-            .set(blockData).await()
-
+        firestore.collection("users").document(userId).collection("blocks").document(blockedUserId)
+            .set(mapOf("blockedUid" to blockedUserId, "blockedAt" to FieldValue.serverTimestamp())).await()
         unfriend(userId, blockedUserId)
     }
-
     suspend fun unblockUser(userId: String, blockedUserId: String) {
-        firestore.collection("users").document(userId)
-            .collection("blocks").document(blockedUserId)
-            .delete().await()
+        firestore.collection("users").document(userId).collection("blocks").document(blockedUserId).delete().await()
     }
-
     fun getBlockedUserIds(userId: String): Flow<List<String>> = callbackFlow {
-        if (userId.isEmpty()) {
-            trySend(emptyList())
-            close()
-            return@callbackFlow
-        }
-        val subscription = firestore.collection("users").document(userId)
-            .collection("blocks")
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    trySend(emptyList())
-                    return@addSnapshotListener
-                }
-                if (snapshot != null) {
-                    val ids = snapshot.documents.map { it.id }
-                    trySend(ids)
-                }
-            }
-        awaitClose { subscription.remove() }
+        if (userId.isEmpty()) { trySend(emptyList()); close(); return@callbackFlow }
+        val sub = firestore.collection("users").document(userId).collection("blocks")
+            .addSnapshotListener { snap, _ -> trySend(snap?.documents?.map { it.id } ?: emptyList()) }
+        awaitClose { sub.remove() }
     }
 
+    // ───────── NOTIFICATIONS ─────────
     fun getNotifications(userId: String): Flow<UiState<List<CommunityNotification>>> = callbackFlow {
-        if (userId.isEmpty()) {
-            trySend(UiState.Empty)
-            close()
-            return@callbackFlow
-        }
+        if (userId.isEmpty()) { trySend(UiState.Empty); close(); return@callbackFlow }
         trySend(UiState.Loading)
-        val subscription = firestore.collection("users").document(userId)
-            .collection("notifications")
+        val sub = firestore.collection("users").document(userId).collection("notifications")
             .orderBy("timestamp", Query.Direction.DESCENDING)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    logFirestoreError("users/$userId/notifications", "getNotifications (orderBy timestamp DESC)", error)
-                    val kind = mapFirestoreError(error)
-                    trySend(UiState.Error(kind, error.message ?: "Failed to load notifications", error))
-                    return@addSnapshotListener
-                }
-                if (snapshot != null) {
-                    val notes = snapshot.documents.mapNotNull { it.toObject(CommunityNotification::class.java)?.copy(id = it.id) }
-                    if (notes.isEmpty()) {
-                        trySend(UiState.Empty)
-                    } else {
-                        trySend(UiState.Success(notes))
-                    }
-                }
+            .addSnapshotListener { snap, err ->
+                if (err != null) { trySend(UiState.Error(mapFirestoreError(err), err.message ?: "Failed", err)); return@addSnapshotListener }
+                val notes = snap?.documents?.mapNotNull { it.toObject(CommunityNotification::class.java)?.copy(id = it.id) } ?: emptyList()
+                trySend(if (notes.isEmpty()) UiState.Empty else UiState.Success(notes))
             }
-        awaitClose { subscription.remove() }
+        awaitClose { sub.remove() }
     }
 
     suspend fun markNotificationRead(userId: String, notificationId: String) {
-        firestore.collection("users").document(userId)
-            .collection("notifications").document(notificationId)
-            .update("isRead", true).await()
+        firestore.collection("users").document(userId).collection("notifications").document(notificationId).update("isRead", true).await()
     }
-
-    suspend fun markAllNotificationsRead(userId: String, notificationIds: List<String>) {
-        if (userId.isEmpty() || notificationIds.isEmpty()) return
-        notificationIds.chunked(500).forEach { chunk ->
-            val batch = firestore.batch()
-            chunk.forEach { notifId ->
-                val ref = firestore.collection("users").document(userId)
-                    .collection("notifications").document(notifId)
-                batch.update(ref, "isRead", true)
-            }
-            batch.commit().await()
+    suspend fun markAllNotificationsRead(userId: String, ids: List<String>) {
+        if (ids.isEmpty()) return
+        ids.chunked(500).forEach { chunk ->
+            val b = firestore.batch()
+            chunk.forEach { b.update(firestore.collection("users").document(userId).collection("notifications").document(it), "isRead", true) }
+            b.commit().await()
         }
     }
-
-    suspend fun deleteNotification(userId: String, notificationId: String) {
-        if (userId.isEmpty() || notificationId.isEmpty()) return
-        firestore.collection("users").document(userId)
-            .collection("notifications").document(notificationId)
-            .delete().await()
+    suspend fun deleteNotification(userId: String, id: String) {
+        firestore.collection("users").document(userId).collection("notifications").document(id).delete().await()
     }
-
-    suspend fun clearAllNotifications(userId: String, notificationIds: List<String>) {
-        if (userId.isEmpty() || notificationIds.isEmpty()) return
-        notificationIds.chunked(500).forEach { chunk ->
-            val batch = firestore.batch()
-            chunk.forEach { notifId ->
-                val ref = firestore.collection("users").document(userId)
-                    .collection("notifications").document(notifId)
-                batch.delete(ref)
-            }
-            batch.commit().await()
+    suspend fun clearAllNotifications(userId: String, ids: List<String>) {
+        if (ids.isEmpty()) return
+        ids.chunked(500).forEach { chunk ->
+            val b = firestore.batch()
+            chunk.forEach { b.delete(firestore.collection("users").document(userId).collection("notifications").document(it)) }
+            b.commit().await()
         }
     }
-
     suspend fun cleanupOldNotifications(userId: String) {
-        if (userId.isEmpty()) return
-        val thirtyDaysAgo = System.currentTimeMillis() - (30L * 24 * 60 * 60 * 1000)
+        val cutoff = System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000
         try {
-            val snapshot = firestore.collection("users").document(userId)
-                .collection("notifications")
-                .whereLessThan("timestamp", thirtyDaysAgo)
-                .limit(50)
-                .get().await()
-
-            if (!snapshot.isEmpty) {
-                val batch = firestore.batch()
-                snapshot.documents.forEach { doc ->
-                    batch.delete(doc.reference)
-                }
-                batch.commit().await()
+            val snap = firestore.collection("users").document(userId).collection("notifications")
+                .whereLessThan("timestamp", cutoff).limit(50).get().await()
+            if (!snap.isEmpty) {
+                val b = firestore.batch(); snap.documents.forEach { b.delete(it.reference) }; b.commit().await()
             }
-        } catch (e: Exception) {
-            android.util.Log.e("CommunityRepository", "Error cleaning up old notifications for $userId", e)
-        }
+        } catch (_: Exception) {}
     }
 
+    // ───────── CHALLENGES ─────────
     fun getChallenges(userId: String): Flow<UiState<List<Challenge>>> = callbackFlow {
-        if (userId.isEmpty()) {
-            trySend(UiState.Empty)
-            close()
-            return@callbackFlow
-        }
+        if (userId.isEmpty()) { trySend(UiState.Empty); close(); return@callbackFlow }
         trySend(UiState.Loading)
-        val subscription = firestore.collection("challenges")
-            .whereArrayContains("participantIds", userId)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    logFirestoreError("challenges", "getChallenges (whereArrayContains participantIds $userId)", error)
-                    val kind = mapFirestoreError(error)
-                    trySend(UiState.Error(kind, error.message ?: "Failed to load challenges", error))
-                    return@addSnapshotListener
-                }
-                if (snapshot != null) {
-                    val challenges = snapshot.documents.mapNotNull { it.toObject(Challenge::class.java)?.copy(id = it.id) }
-                    if (challenges.isEmpty()) {
-                        trySend(UiState.Empty)
-                    } else {
-                        trySend(UiState.Success(challenges))
-                    }
-                }
+        val sub = firestore.collection("challenges").whereArrayContains("participantIds", userId)
+            .addSnapshotListener { snap, err ->
+                if (err != null) { trySend(UiState.Error(mapFirestoreError(err), err.message ?: "Failed", err)); return@addSnapshotListener }
+                val list = snap?.documents?.mapNotNull { it.toObject(Challenge::class.java)?.copy(id = it.id) } ?: emptyList()
+                trySend(if (list.isEmpty()) UiState.Empty else UiState.Success(list))
             }
-        awaitClose { subscription.remove() }
+        awaitClose { sub.remove() }
     }
-
     suspend fun joinChallenge(challengeId: String, userId: String) {
         firestore.collection("challenges").document(challengeId)
-            .update(
-                "participantIds", FieldValue.arrayUnion(userId),
-                "progress.$userId", 0.0f
-            ).await()
+            .update("participantIds", FieldValue.arrayUnion(userId), "progress.$userId", 0.0f).await()
     }
 
+    // ───────── DUELS ─────────
     fun getDuels(userId: String): Flow<UiState<List<Duel>>> = callbackFlow {
-        if (userId.isEmpty()) {
-            trySend(UiState.Empty)
-            close()
-            return@callbackFlow
-        }
+        if (userId.isEmpty()) { trySend(UiState.Empty); close(); return@callbackFlow }
         trySend(UiState.Loading)
-        val subscription = firestore.collection("duels")
-            .whereArrayContains("participants", userId)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    logFirestoreError("duels", "getDuels (whereArrayContains participants $userId)", error)
-                    val kind = mapFirestoreError(error)
-                    trySend(UiState.Error(kind, error.message ?: "Failed to load duels", error))
-                    return@addSnapshotListener
-                }
-                if (snapshot != null) {
-                    val duels = snapshot.documents.mapNotNull { it.toObject(Duel::class.java)?.copy(id = it.id) }
-                    if (duels.isEmpty()) {
-                        trySend(UiState.Empty)
-                    } else {
-                        trySend(UiState.Success(duels))
-                    }
-                }
+        val sub = firestore.collection("duels").whereArrayContains("participants", userId)
+            .addSnapshotListener { snap, err ->
+                if (err != null) { trySend(UiState.Error(mapFirestoreError(err), err.message ?: "Failed", err)); return@addSnapshotListener }
+                val list = snap?.documents?.mapNotNull { it.toObject(Duel::class.java)?.copy(id = it.id) } ?: emptyList()
+                trySend(if (list.isEmpty()) UiState.Empty else UiState.Success(list))
             }
-        awaitClose { subscription.remove() }
+        awaitClose { sub.remove() }
     }
-
-    suspend fun createDuel(duel: Duel) {
-        firestore.collection("duels").document(duel.id).set(duel).await()
-    }
-
+    suspend fun createDuel(duel: Duel) { firestore.collection("duels").document(duel.id).set(duel).await() }
     suspend fun sendDuelInvite(targetUserId: String, senderId: String, senderName: String, habitType: String, duelId: String) {
-        val notification = CommunityNotification(
-            id = UUID.randomUUID().toString(),
-            senderId = senderId,
-            senderName = senderName,
-            type = "DUEL_INVITE",
-            timestamp = System.currentTimeMillis(),
-            habitType = habitType,
-            duelId = duelId,
-            message = "$senderName has challenged you to a $habitType duel!"
-        )
-        firestore.collection("users").document(targetUserId)
-            .collection("notifications").document(notification.id)
-            .set(notification).await()
+        val n = CommunityNotification(id = UUID.randomUUID().toString(), senderId = senderId, senderName = senderName,
+            type = "DUEL_INVITE", timestamp = System.currentTimeMillis(), habitType = habitType, duelId = duelId,
+            message = "$senderName has challenged you to a $habitType duel!")
+        firestore.collection("users").document(targetUserId).collection("notifications").document(n.id).set(n).await()
     }
-
     suspend fun sendDuelResult(targetUserId: String, senderId: String, senderName: String, duelId: String, message: String) {
-        val notification = CommunityNotification(
-            id = UUID.randomUUID().toString(),
-            senderId = senderId,
-            senderName = senderName,
-            type = "DUEL_RESULT",
-            timestamp = System.currentTimeMillis(),
-            duelId = duelId,
-            message = message
-        )
-        firestore.collection("users").document(targetUserId)
-            .collection("notifications").document(notification.id)
-            .set(notification).await()
+        val n = CommunityNotification(id = UUID.randomUUID().toString(), senderId = senderId, senderName = senderName,
+            type = "DUEL_RESULT", timestamp = System.currentTimeMillis(), duelId = duelId, message = message)
+        firestore.collection("users").document(targetUserId).collection("notifications").document(n.id).set(n).await()
     }
 
     suspend fun resolveAndCompleteDuel(duelId: String) {
-        val duelRef = firestore.collection("duels").document(duelId)
-        firestore.runTransaction { transaction ->
-            val snapshot = transaction.get(duelRef)
-            if (!snapshot.exists()) return@runTransaction
-            val status = snapshot.getString("status") ?: "ACTIVE"
-            if (status != "ACTIVE") return@runTransaction
-
-            val endDateStr = snapshot.getString("endDate") ?: ""
-            if (endDateStr.isNotEmpty()) {
-                try {
-                    val endDate = java.time.LocalDate.parse(endDateStr)
-                    if (java.time.LocalDate.now().isBefore(endDate) || java.time.LocalDate.now().isEqual(endDate)) {
-                        return@runTransaction
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e("CommunityRepository", "Error parsing duel endDate: $endDateStr", e)
+        val ref = firestore.collection("duels").document(duelId)
+        firestore.runTransaction { txn ->
+            val snap = txn.get(ref)
+            if (!snap.exists()) return@runTransaction
+            if ((snap.getString("status") ?: "ACTIVE") != "ACTIVE") return@runTransaction
+            val endStr = snap.getString("endDate") ?: ""
+            try {
+                if (endStr.isNotEmpty()) {
+                    val end = java.time.LocalDate.parse(endStr)
+                    if (!java.time.LocalDate.now().isAfter(end)) return@runTransaction
                 }
-            }
-
-            val participants = snapshot.get("participants") as? List<*> ?: emptyList<Any>()
-            if (participants.size < 2) return@runTransaction
-            val p1 = participants[0] as? String ?: return@runTransaction
-            val p2 = participants[1] as? String ?: return@runTransaction
-
-            val scores = snapshot.get("scores") as? Map<*, *> ?: emptyMap<Any, Any>()
+            } catch (_: Exception) { return@runTransaction }
+            val parts = snap.get("participants") as? List<*> ?: emptyList<Any>()
+            if (parts.size < 2) return@runTransaction
+            val p1 = parts[0] as? String ?: return@runTransaction
+            val p2 = parts[1] as? String ?: return@runTransaction
+            val scores = snap.get("scores") as? Map<*, *> ?: emptyMap<Any, Any>()
             val s1 = (scores[p1] as? Number)?.toInt() ?: 0
             val s2 = (scores[p2] as? Number)?.toInt() ?: 0
-
-            val winnerId = when {
-                s1 > s2 -> p1
-                s2 > s1 -> p2
-                else -> "DRAW"
-            }
-
-            transaction.update(
-                duelRef,
-                mapOf(
-                    "status" to "COMPLETED",
-                    "winnerId" to winnerId,
-                    "resolvedAt" to FieldValue.serverTimestamp()
-                )
-            )
-
-            val habitType = snapshot.getString("habitType") ?: "General"
-            val msg1 = if (winnerId == p1) "You won the duel against $habitType!" else if (winnerId == p2) "You lost the duel against $habitType." else "The duel ended in a draw."
-            val msg2 = if (winnerId == p2) "You won the duel against $habitType!" else if (winnerId == p1) "You lost the duel against $habitType." else "The duel ended in a draw."
-
-            val notifRef1 = firestore.collection("users").document(p1).collection("notifications").document("duelresult_${duelId}_$p1")
-            val notifRef2 = firestore.collection("users").document(p2).collection("notifications").document("duelresult_${duelId}_$p2")
-
-            val notif1 = CommunityNotification(
-                id = "duelresult_${duelId}_$p1",
-                senderId = "SYSTEM",
-                senderName = "Motion.Pulse",
-                type = "DUEL_RESULT",
-                timestamp = System.currentTimeMillis(),
-                duelId = duelId,
-                message = msg1
-            )
-            val notif2 = CommunityNotification(
-                id = "duelresult_${duelId}_$p2",
-                senderId = "SYSTEM",
-                senderName = "Motion.Pulse",
-                type = "DUEL_RESULT",
-                timestamp = System.currentTimeMillis(),
-                duelId = duelId,
-                message = msg2
-            )
-
-            transaction.set(notifRef1, notif1)
-            transaction.set(notifRef2, notif2)
-        }.await()
-    }
-
-    suspend fun completeDuelStatus(duelId: String, winnerId: String?) {
-        firestore.collection("duels").document(duelId)
-            .update(
-                "status", "COMPLETED",
-                "winnerId", winnerId
-            ).await()
-    }
-
-    suspend fun updateDuelScore(duelId: String, userId: String) {
-        val docRef = firestore.collection("duels").document(duelId)
-        firestore.runTransaction { transaction ->
-            val snapshot = transaction.get(docRef)
-            val scores = snapshot.get("scores") as? MutableMap<String, Any> ?: mutableMapOf()
-            val current = (scores[userId] as? Number)?.toLong() ?: 0L
-            scores[userId] = current + 1L
-            transaction.update(docRef, "scores", scores)
-        }.await()
-    }
-
-    suspend fun decrementDuelScore(duelId: String, userId: String) {
-        val docRef = firestore.collection("duels").document(duelId)
-        firestore.runTransaction { transaction ->
-            val snapshot = transaction.get(docRef)
-            val scores = snapshot.get("scores") as? MutableMap<String, Any> ?: mutableMapOf()
-            val current = (scores[userId] as? Number)?.toLong() ?: 0L
-            scores[userId] = maxOf(0L, current - 1L)
-            transaction.update(docRef, "scores", scores)
+            val winner = when { s1 > s2 -> p1; s2 > s1 -> p2; else -> "DRAW" }
+            txn.update(ref, mapOf("status" to "COMPLETED", "winnerId" to winner, "resolvedAt" to FieldValue.serverTimestamp()))
+            val habitType = snap.getString("habitType") ?: "General"
+            listOf(p1 to (if (winner == p1) "You won the duel against $habitType!" else if (winner == p2) "You lost the duel against $habitType." else "The duel ended in a draw."),
+                   p2 to (if (winner == p2) "You won the duel against $habitType!" else if (winner == p1) "You lost the duel against $habitType." else "The duel ended in a draw."))
+                .forEach { (uid, msg) ->
+                    val n = CommunityNotification(id = "duelresult_${duelId}_$uid", senderId = "SYSTEM", senderName = "Motion.Pulse",
+                        type = "DUEL_RESULT", timestamp = System.currentTimeMillis(), duelId = duelId, message = msg)
+                    txn.set(firestore.collection("users").document(uid).collection("notifications").document(n.id), n)
+                }
         }.await()
     }
 
     suspend fun getActiveDuelsOnce(userId: String): List<Duel> {
-        val snapshot = firestore.collection("duels")
-            .whereArrayContains("participants", userId)
-            .whereEqualTo("status", "ACTIVE")
-            .get()
-            .await()
-        return snapshot.documents.mapNotNull { it.toObject(Duel::class.java)?.copy(id = it.id) }
+        val snap = firestore.collection("duels").whereArrayContains("participants", userId)
+            .whereEqualTo("status", "ACTIVE").get().await()
+        return snap.documents.mapNotNull { it.toObject(Duel::class.java)?.copy(id = it.id) }
     }
 
-    suspend fun findUserByFriendCode(rawCode: String, myUid: String, myCode: String?, context: android.content.Context): com.example.motionpulse.domain.models.FriendLookupResult {
-        return FriendCodeDataSource(context).lookup(rawCode, myUid, myCode)
+    suspend fun updateDuelScore(duelId: String, userId: String) {
+        val ref = firestore.collection("duels").document(duelId)
+        firestore.runTransaction { txn ->
+            val snap = txn.get(ref)
+            val scores = (snap.get("scores") as? MutableMap<String, Any>) ?: mutableMapOf()
+            scores[userId] = ((scores[userId] as? Number)?.toLong() ?: 0L) + 1L
+            txn.update(ref, "scores", scores)
+        }.await()
+    }
+    suspend fun decrementDuelScore(duelId: String, userId: String) {
+        val ref = firestore.collection("duels").document(duelId)
+        firestore.runTransaction { txn ->
+            val snap = txn.get(ref)
+            val scores = (snap.get("scores") as? MutableMap<String, Any>) ?: mutableMapOf()
+            scores[userId] = maxOf(0L, ((scores[userId] as? Number)?.toLong() ?: 0L) - 1L)
+            txn.update(ref, "scores", scores)
+        }.await()
+    }
+    suspend fun completeDuelStatus(duelId: String, winnerId: String?) {
+        firestore.collection("duels").document(duelId).update("status", "COMPLETED", "winnerId", winnerId).await()
     }
 
+    // ───────── FRIEND CODES ─────────
+    suspend fun findUserByFriendCode(rawCode: String, myUid: String, myCode: String?, context: android.content.Context) =
+        FriendCodeDataSource(context).lookup(rawCode, myUid, myCode)
+
+    // ───────── FRIEND REQUESTS ─────────
     fun getFriendRequests(userId: String): Flow<UiState<List<com.example.motionpulse.data.local.entity.FriendEntity>>> = callbackFlow {
-        if (userId.isEmpty()) {
-            trySend(UiState.Empty)
-            close()
-            return@callbackFlow
-        }
+        if (userId.isEmpty()) { trySend(UiState.Empty); close(); return@callbackFlow }
         trySend(UiState.Loading)
-        val subscription = firestore.collection("friendRequests")
-            .whereArrayContains("participants", userId)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    logFirestoreError("friendRequests", "getFriendRequests (whereArrayContains participants $userId)", error)
-                    val kind = mapFirestoreError(error)
-                    trySend(UiState.Error(kind, error.message ?: "Failed to load friend requests", error))
-                    return@addSnapshotListener
-                }
-                snapshot?.let {
-                    val requests = it.documents.mapNotNull { doc ->
-                        val requesterUid = doc.getString("requesterUid") ?: ""
-                        val recipientUid = doc.getString("recipientUid") ?: ""
-                        val statusStr = doc.getString("status") ?: "PENDING"
-                        val status = com.example.motionpulse.data.local.entity.FriendStatus.valueOf(statusStr)
-                        
-                        com.example.motionpulse.data.local.entity.FriendEntity(
-                            id = doc.id,
-                            requesterUid = requesterUid,
-                            recipientUid = recipientUid,
-                            status = status
-                        )
-                    }
-                    if (requests.isEmpty()) {
-                        trySend(UiState.Empty)
-                    } else {
-                        trySend(UiState.Success(requests))
-                    }
-                }
+        val sub = firestore.collection("friendRequests").whereArrayContains("participants", userId)
+            .addSnapshotListener { snap, err ->
+                if (err != null) { trySend(UiState.Error(mapFirestoreError(err), err.message ?: "Failed", err)); return@addSnapshotListener }
+                val list = snap?.documents?.mapNotNull { d ->
+                    val r = d.getString("requesterUid") ?: ""
+                    val c = d.getString("recipientUid") ?: ""
+                    val s = try { com.example.motionpulse.data.local.entity.FriendStatus.valueOf(d.getString("status") ?: "PENDING") }
+                            catch (_: Exception) { com.example.motionpulse.data.local.entity.FriendStatus.PENDING }
+                    com.example.motionpulse.data.local.entity.FriendEntity(id = d.id, requesterUid = r, recipientUid = c, status = s)
+                } ?: emptyList()
+                trySend(if (list.isEmpty()) UiState.Empty else UiState.Success(list))
             }
-        awaitClose { subscription.remove() }
+        awaitClose { sub.remove() }
     }
 
+    /**
+     * IMPORTANT: The FRIEND REQUEST document ID and the NOTIFICATION ID are now identical
+     * (both are `${min(sender,recipient)}_${max(sender,recipient)}`). This is required for
+     * the Accept button in the Notification tray to correctly target the friend request doc.
+     */
     suspend fun sendFriendRequest(senderId: String, senderName: String, recipientId: String) {
-        if (senderId == recipientId) {
-            throw IllegalArgumentException("That's your own code.")
-        }
+        if (senderId == recipientId) throw IllegalArgumentException("That's your own code.")
 
-        val myRequests = firestore.collection("friendRequests")
-            .whereArrayContains("participants", senderId)
-            .get().await()
-
-        val pendingSentCount = myRequests.documents.count { doc ->
-            doc.getString("status") == "PENDING" && doc.getString("requesterUid") == senderId
-        }
-        if (pendingSentCount >= 20) {
-            throw IllegalStateException("You have too many pending sent requests (max 20).")
-        }
-
-        val friendCount = myRequests.documents.count { doc ->
-            doc.getString("status") == "ACCEPTED"
-        }
-        if (friendCount >= 100) {
-            throw IllegalStateException("You have reached the maximum limit of 100 friends.")
-        }
-
-        val requestId = if (senderId < recipientId) "${senderId}_${recipientId}" else "${recipientId}_${senderId}"
-        val existingDoc = firestore.collection("friendRequests").document(requestId).get().await()
-
-        if (existingDoc.exists()) {
-            val status = existingDoc.getString("status")
-            val requester = existingDoc.getString("requesterUid")
-
-            if (status == "ACCEPTED") {
-                throw IllegalStateException("You're already friends with this user.")
-            }
-            if (status == "PENDING") {
-                if (requester == recipientId) {
-                    acceptRequest(requestId, senderId, senderName)
-                    return
-                } else {
-                    throw IllegalStateException("Request already sent.")
+        // --- 1) Make sure the sender's profile exists (heals "Player 1" from fresh logins) ---
+        try {
+            val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+            if (currentUser != null && currentUser.uid == senderId) {
+                val publicRef = firestore.collection("publicProfiles").document(senderId)
+                val usersRef = firestore.collection("users").document(senderId)
+                val pubSnap = publicRef.get().await()
+                if (!pubSnap.exists()) {
+                    val name = currentUser.displayName?.takeIf { it.isNotBlank() }
+                        ?: currentUser.email?.substringBefore("@")?.takeIf { it.isNotBlank() }
+                        ?: "User"
+                    publicRef.set(hashMapOf(
+                        "uid" to senderId,
+                        "displayName" to name,
+                        "totalAuraXp" to 0L,
+                        "currentLevel" to 1,
+                        "currentStreak" to 0,
+                        "recentXp" to emptyMap<String, Long>()
+                    )).await()
                 }
+                val userSnap = usersRef.get().await()
+                if (!userSnap.exists()) {
+                    val name = currentUser.displayName?.takeIf { it.isNotBlank() }
+                        ?: currentUser.email?.substringBefore("@")?.takeIf { it.isNotBlank() }
+                        ?: "User"
+                    usersRef.set(hashMapOf(
+                        "uid" to senderId,
+                        "displayName" to name,
+                        "email" to (currentUser.email ?: ""),
+                        "totalAuraXp" to 0L,
+                        "currentLevel" to 1,
+                        "currentStreak" to 0,
+                        "language" to "English",
+                        "remindersEnabled" to true,
+                        "shareMilestonesWithFriends" to true,
+                        "showHabitNamesInPosts" to false,
+                        "createdAt" to FieldValue.serverTimestamp()
+                    )).await()
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("CommunityRepository", "Profile heal skipped: ${e.message}")
+        }
+
+        // --- 2) Existing limit checks ---
+        val myReqs = firestore.collection("friendRequests").whereArrayContains("participants", senderId).get().await()
+        val pendingSent = myReqs.documents.count { it.getString("status") == "PENDING" && it.getString("requesterUid") == senderId }
+        if (pendingSent >= 20) throw IllegalStateException("You have too many pending sent requests (max 20).")
+        val friendCount = myReqs.documents.count { it.getString("status") == "ACCEPTED" }
+        if (friendCount >= 100) throw IllegalStateException("You have reached the maximum limit of 100 friends.")
+
+        // --- 3) Write the friend request document ---
+        val requestId = if (senderId < recipientId) "${senderId}_${recipientId}" else "${recipientId}_${senderId}"
+        val existing = firestore.collection("friendRequests").document(requestId).get().await()
+        if (existing.exists()) {
+            val status = existing.getString("status")
+            val requester = existing.getString("requesterUid")
+            if (status == "ACCEPTED") throw IllegalStateException("You're already friends with this user.")
+            if (status == "PENDING") {
+                if (requester == recipientId) { acceptRequest(requestId, senderId, senderName); return }
+                else throw IllegalStateException("Request already sent.")
             }
             if (status == "DECLINED") {
-                val respondedAtMs = existingDoc.getTimestamp("respondedAt")?.toDate()?.time ?: existingDoc.getLong("createdAt") ?: 0L
-                val sevenDaysMs = 7L * 24 * 60 * 60 * 1000L
-                val now = System.currentTimeMillis()
-                if (now - respondedAtMs < sevenDaysMs) {
-                    val availableDate = java.time.Instant.ofEpochMilli(respondedAtMs + sevenDaysMs)
-                        .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
-                    throw IllegalStateException("You can send another request on $availableDate.")
-                } else {
-                    existingDoc.reference.delete().await()
-                }
+                val respondedAt = existing.getTimestamp("respondedAt")?.toDate()?.time ?: existing.getLong("createdAt") ?: 0L
+                val seven = 7L * 24 * 60 * 60 * 1000L
+                if (System.currentTimeMillis() - respondedAt < seven) throw IllegalStateException("You can send another request later.")
+                existing.reference.delete().await()
             }
         }
 
@@ -616,27 +390,21 @@ class CommunityRepository(
             "createdAt" to FieldValue.serverTimestamp(),
             "respondedAt" to null
         )
+        firestore.collection("friendRequests").document(requestId).set(request).await()
 
-        try {
-            firestore.collection("friendRequests").document(requestId).set(request).await()
-
-            val notification = CommunityNotification(
-                id = UUID.randomUUID().toString(),
-                senderId = senderId,
-                senderName = senderName,
-                type = "FRIEND_REQUEST",
-                timestamp = System.currentTimeMillis(),
-                message = "$senderName sent you a friend request!"
-            )
-            firestore.collection("users").document(recipientId)
-                .collection("notifications").document(notification.id)
-                .set(notification).await()
-        } catch (e: Exception) {
-            if (e.message?.contains("PERMISSION_DENIED", ignoreCase = true) == true) {
-                throw Exception("Couldn't send the request.")
-            }
-            throw e
-        }
+        // --- 4) Notification (ID == requestId, so accept works) ---
+        val effectiveSenderName = senderName.ifBlank { "User" }
+        val notification = CommunityNotification(
+            id = requestId,
+            senderId = senderId,
+            senderName = effectiveSenderName,
+            type = "FRIEND_REQUEST",
+            timestamp = System.currentTimeMillis(),
+            message = "$effectiveSenderName sent you a friend request!"
+        )
+        firestore.collection("users").document(recipientId)
+            .collection("notifications").document(notification.id)
+            .set(notification).await()
     }
 
     suspend fun cancelFriendRequest(requestId: String) {
@@ -644,206 +412,207 @@ class CommunityRepository(
     }
 
     suspend fun respondToFriendRequest(requestId: String, userId: String, userName: String, otherUserId: String, accept: Boolean) {
-        if (accept) {
-            acceptRequest(requestId, userId, userName)
-        } else {
-            declineRequest(requestId, userId)
-        }
+        if (accept) acceptRequest(requestId, userId, userName) else declineRequest(requestId, userId)
     }
 
-    suspend fun acceptRequest(docId: String, recipientUid: String, recipientName: String) {
-        val reqRef = firestore.collection("friendRequests").document(docId)
-        val notifId = "friendaccepted_$docId"
+    suspend fun acceptRequest(docId: String, recipientUid: String, recipientName: String): Result<Unit> {
+        return try {
+            val reqRef = firestore.collection("friendRequests").document(docId)
+            val snap = reqRef.get().await()
+            if (!snap.exists()) return Result.failure(Exception("This request is no longer available."))
+            if (snap.getString("status") != "PENDING" || snap.getString("recipientUid") != recipientUid)
+                return Result.failure(Exception("This request has already been processed."))
+            val requester = snap.getString("requesterUid")
 
-        firestore.runTransaction { transaction ->
-            val snapshot = transaction.get(reqRef)
-            if (!snapshot.exists()) {
-                throw IllegalStateException("This request is no longer available")
-            }
-            val status = snapshot.getString("status")
-            val recipient = snapshot.getString("recipientUid")
-            val requester = snapshot.getString("requesterUid")
-
-            if (status != "PENDING" || recipient != recipientUid) {
-                throw IllegalStateException("This request is no longer available")
-            }
-
-            transaction.update(reqRef, mapOf(
-                "status" to "ACCEPTED",
-                "respondedAt" to FieldValue.serverTimestamp()
-            ))
-
-            if (requester != null) {
-                val notifRef = firestore.collection("users").document(requester)
-                    .collection("notifications").document(notifId)
-                val notification = CommunityNotification(
-                    id = notifId,
-                    senderId = recipientUid,
-                    senderName = recipientName,
-                    type = "FRIEND_ACCEPTED",
-                    timestamp = System.currentTimeMillis(),
-                    message = "$recipientName accepted your friend request!"
-                )
-                transaction.set(notifRef, notification)
-            }
-        }.await()
-    }
-
-    suspend fun declineRequest(docId: String, recipientUid: String) {
-        val reqRef = firestore.collection("friendRequests").document(docId)
-        firestore.runTransaction { transaction ->
-            val snapshot = transaction.get(reqRef)
-            if (!snapshot.exists()) {
-                throw IllegalStateException("This request is no longer available")
-            }
-            val status = snapshot.getString("status")
-            val recipient = snapshot.getString("recipientUid")
-
-            if (status != "PENDING" || recipient != recipientUid) {
-                throw IllegalStateException("This request is no longer available")
-            }
-
-            transaction.update(reqRef, mapOf(
-                "status" to "DECLINED",
-                "respondedAt" to FieldValue.serverTimestamp()
-            ))
-        }.await()
-    }
-
-    suspend fun unfriendAtomic(userId: String, otherUserId: String, db: com.example.motionpulse.data.local.AppDatabase? = null) {
-        val batch = firestore.batch()
-
-        val querySnapshot = firestore.collection("friendRequests")
-            .whereArrayContains("participants", userId)
-            .get().await()
-
-        val doc = querySnapshot.documents.find { d ->
-            val parts = d.get("participants") as? List<*> ?: emptyList<Any>()
-            parts.contains(otherUserId)
-        }
-        doc?.let {
-            batch.delete(firestore.collection("friendRequests").document(it.id))
-        }
-
-        val duelsSnapshot = firestore.collection("duels")
-            .whereArrayContains("participants", userId)
-            .get().await()
-
-        for (duelDoc in duelsSnapshot.documents) {
-            val participants = duelDoc.get("participants") as? List<*> ?: emptyList<Any>()
-            val status = duelDoc.getString("status")
-            if (participants.contains(otherUserId) && status == "ACTIVE") {
-                batch.update(firestore.collection("duels").document(duelDoc.id), "status", "CANCELLED")
-            }
-        }
-
-        val feedSnapshot = firestore.collection("activityFeed")
-            .whereEqualTo("actorId", userId)
-            .orderBy("timestamp", Query.Direction.DESCENDING)
-            .limit(50)
-            .get().await()
-
-        for (feedDoc in feedSnapshot.documents) {
-            batch.update(feedDoc.reference, "visibleTo", FieldValue.arrayRemove(otherUserId))
-        }
-
-        batch.commit().await()
-
-        db?.let {
+            // --- heal recipient's public profile so the feed has a real actorName ---
             try {
-                val friendships = it.friendDao().getAllFriendships(userId).first()
-                val friendship = friendships.find { f -> 
-                    (f.requesterUid == userId && f.recipientUid == otherUserId) || 
-                    (f.requesterUid == otherUserId && f.recipientUid == userId)
-                }
-                friendship?.let { f ->
-                    it.friendDao().deleteFriend(f)
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("CommunityRepository", "Error during atomic unfriend transaction", e)
-            }
-        }
-    }
-
-    suspend fun unfriend(userId: String, otherUserId: String) {
-        unfriendAtomic(userId, otherUserId, null)
-    }
-
-    fun getFriendsProfiles(friendIds: List<String>): Flow<UiState<List<UserProfileEntity>>> = callbackFlow {
-        if (friendIds.isEmpty()) {
-            trySend(UiState.Empty)
-            close()
-            return@callbackFlow
-        }
-        trySend(UiState.Loading)
-
-        val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)
-        val job = scope.launch {
-            try {
-                val deferreds = friendIds.map { uid ->
-                    async {
-                        try {
-                            val doc = firestore.collection("publicProfiles").document(uid).get().await()
-                            doc.toObject(UserProfileEntity::class.java)
-                        } catch (e: Exception) {
-                            UserProfileEntity(uid = uid, displayName = "Unknown user")
+                val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+                if (currentUser != null && currentUser.uid == recipientUid) {
+                    val pubRef = firestore.collection("publicProfiles").document(recipientUid)
+                    val pubSnap = pubRef.get().await()
+                    if (!pubSnap.exists()) {
+                        val name = recipientName.ifBlank {
+                            currentUser.displayName?.takeIf { it.isNotBlank() }
+                                ?: currentUser.email?.substringBefore("@")?.takeIf { it.isNotBlank() }
+                                ?: "User"
                         }
+                        pubRef.set(hashMapOf(
+                            "uid" to recipientUid,
+                            "displayName" to name,
+                            "totalAuraXp" to 0L,
+                            "currentLevel" to 1,
+                            "currentStreak" to 0,
+                            "recentXp" to emptyMap<String, Long>()
+                        )).await()
                     }
                 }
-                val profiles = deferreds.awaitAll().filterNotNull()
-                if (profiles.isEmpty()) {
-                    trySend(UiState.Empty)
-                } else {
-                    trySend(UiState.Success(profiles))
-                }
             } catch (e: Exception) {
-                val kind = if (e is FirebaseFirestoreException) mapFirestoreError(e) else ErrorKind.UNKNOWN
-                trySend(UiState.Error(kind, e.message ?: "Failed to load friend profiles", e))
+                android.util.Log.w("CommunityRepository", "acceptRequest heal skipped: ${e.message}")
             }
+
+            val batch = firestore.batch()
+            batch.update(reqRef, mapOf("status" to "ACCEPTED", "respondedAt" to FieldValue.serverTimestamp()))
+            batch.delete(firestore.collection("users").document(recipientUid)
+                .collection("notifications").document(docId))
+            if (requester != null) {
+                val feedId = "friendaccepted_$docId"
+                batch.set(firestore.collection("activityFeed").document(feedId), hashMapOf(
+                    "id" to feedId,
+                    "actorId" to recipientUid,
+                    "actorName" to recipientName.ifBlank { "User" },
+                    "type" to "FRIEND_ACCEPTED",
+                    "timestamp" to System.currentTimeMillis(),
+                    "visibleTo" to listOf(recipientUid, requester),
+                    "reactions" to emptyMap<String, Boolean>()
+                ))
+            }
+            batch.commit().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("CommunityRepository", "acceptRequest failed: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun declineRequest(docId: String, recipientUid: String): Result<Unit> {
+        return try {
+            val reqRef = firestore.collection("friendRequests").document(docId)
+            val snap = reqRef.get().await()
+            if (!snap.exists()) return Result.failure(Exception("This request is no longer available."))
+            if (snap.getString("status") != "PENDING" || snap.getString("recipientUid") != recipientUid)
+                return Result.failure(Exception("This request has already been processed."))
+
+            val batch = firestore.batch()
+            batch.update(reqRef, mapOf("status" to "DECLINED", "respondedAt" to FieldValue.serverTimestamp()))
+            batch.delete(firestore.collection("users").document(recipientUid).collection("notifications").document(docId))
+            batch.commit().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("CommunityRepository", "declineRequest failed: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    // ───────── UNFRIEND ─────────
+    suspend fun unfriendAtomic(userId: String, otherUserId: String, db: AppDatabase? = null) {
+        val batch = firestore.batch()
+
+        // 1. Delete the friend request (ACCEPTED) between the two users
+        try {
+            val reqs = firestore.collection("friendRequests")
+                .whereArrayContains("participants", userId)
+                .get().await()
+            reqs.documents.find { (it.get("participants") as? List<*>)?.contains(otherUserId) == true }
+                ?.let { batch.delete(it.reference) }
+        } catch (e: Exception) {
+            android.util.Log.e("CommunityRepository", "unfriend: reqs lookup failed: ${e.message}", e)
         }
 
+        // 2. Cancel active duels with that user
+        try {
+            val duels = firestore.collection("duels")
+                .whereArrayContains("participants", userId)
+                .get().await()
+            duels.documents.forEach { d ->
+                if ((d.get("participants") as? List<*>)?.contains(otherUserId) == true &&
+                    d.getString("status") == "ACTIVE") {
+                    batch.update(d.reference, "status", "CANCELLED")
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("CommunityRepository", "unfriend: duels lookup failed: ${e.message}", e)
+        }
+
+        // 3. Remove otherUserId from visibleTo of the user's own feed entries
+        //    Use per-document reads to avoid queries Firestore rules reject.
+        try {
+            val myFeed = firestore.collection("activityFeed")
+                .whereEqualTo("actorId", userId)
+                .limit(20)
+                .get().await()
+            myFeed.documents.forEach { doc ->
+                try {
+                    val currentVisible = (doc.get("visibleTo") as? List<*>)?.map { it.toString() } ?: emptyList()
+                    if (currentVisible.contains(otherUserId)) {
+                        batch.update(doc.reference, "visibleTo", FieldValue.arrayRemove(otherUserId))
+                    }
+                } catch (_: Exception) { /* ignore individual doc failures */ }
+            }
+        } catch (e: Exception) {
+            // If this still throws PERMISSION_DENIED, swallow it — it's not critical for unfriending.
+            android.util.Log.w("CommunityRepository", "unfriend: feed cleanup skipped (${e.message})")
+        }
+
+        // 4. Commit the batch (deletes friend request, cancels duels)
+        try {
+            batch.commit().await()
+        } catch (e: Exception) {
+            android.util.Log.e("CommunityRepository", "unfriend: batch commit failed: ${e.message}", e)
+        }
+
+        // 5. Remove the local Room friendship row
+        db?.let {
+            try {
+                val all = it.friendDao().getAllFriendships(userId).first()
+                all.find { f ->
+                    (f.requesterUid == userId && f.recipientUid == otherUserId) ||
+                    (f.requesterUid == otherUserId && f.recipientUid == userId)
+                }?.let { f -> it.friendDao().deleteFriend(f) }
+            } catch (e: Exception) {
+                android.util.Log.e("CommunityRepository", "unfriend: local DB cleanup failed: ${e.message}", e)
+            }
+        }
+    }
+
+    suspend fun unfriend(userId: String, otherUserId: String) { unfriendAtomic(userId, otherUserId, null) }
+
+    // ───────── FRIEND PROFILES ─────────
+    fun getFriendsProfiles(friendIds: List<String>): Flow<UiState<List<UserProfileEntity>>> = callbackFlow {
+        if (friendIds.isEmpty()) { trySend(UiState.Empty); close(); return@callbackFlow }
+        trySend(UiState.Loading)
+        val scope = CoroutineScope(Dispatchers.IO)
+        val job = scope.launch {
+            try {
+                val profiles = friendIds.map { uid ->
+                    async {
+                        try { firestore.collection("publicProfiles").document(uid).get().await().toObject(UserProfileEntity::class.java) }
+                        catch (_: Exception) { UserProfileEntity(uid = uid, displayName = "Unknown user") }
+                    }
+                }.awaitAll().filterNotNull()
+                trySend(if (profiles.isEmpty()) UiState.Empty else UiState.Success(profiles))
+            } catch (e: Exception) {
+                val kind = if (e is FirebaseFirestoreException) mapFirestoreError(e) else ErrorKind.UNKNOWN
+                trySend(UiState.Error(kind, e.message ?: "Failed to load profiles", e))
+            }
+        }
         awaitClose { job.cancel() }
     }
 
+    // ───────── FEED CLEANUP / ACHIEVEMENTS ─────────
     suspend fun deleteActorFeedEntriesInBatches(actorId: String) {
         if (actorId.isEmpty()) return
-        try {
-            val snapshot = firestore.collection("activityFeed")
-                .whereEqualTo("actorId", actorId)
-                .limit(400)
-                .get().await()
-
-            if (!snapshot.isEmpty) {
-                val batch = firestore.batch()
-                snapshot.documents.forEach { doc ->
-                    batch.delete(doc.reference)
-                }
-                batch.commit().await()
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("CommunityRepository", "Error deleting actor feed entries for $actorId: ${e.message}", e)
-            throw e
+        val snap = firestore.collection("activityFeed").whereEqualTo("actorId", actorId).limit(400).get().await()
+        if (!snap.isEmpty) {
+            val b = firestore.batch(); snap.documents.forEach { b.delete(it.reference) }; b.commit().await()
         }
     }
-
     suspend fun removeHabitNameFromActorFeedEntries(actorId: String) {
         if (actorId.isEmpty()) return
-        try {
-            val snapshot = firestore.collection("activityFeed")
-                .whereEqualTo("actorId", actorId)
-                .limit(400)
-                .get().await()
-
-            if (!snapshot.isEmpty) {
-                val batch = firestore.batch()
-                snapshot.documents.forEach { doc ->
-                    batch.update(doc.reference, "habitName", com.google.firebase.firestore.FieldValue.delete())
-                }
-                batch.commit().await()
-            }
-        } catch (e: Exception) {
-            android.util.Log.e("CommunityRepository", "Error removing habit name from feed entries for $actorId: ${e.message}", e)
-            throw e
+        val snap = firestore.collection("activityFeed").whereEqualTo("actorId", actorId).limit(400).get().await()
+        if (!snap.isEmpty) {
+            val b = firestore.batch(); snap.documents.forEach { b.update(it.reference, "habitName", FieldValue.delete()) }; b.commit().await()
         }
+    }
+    suspend fun postAchievementToFeed(entryId: String, actorId: String, actorName: String, habitName: String, type: String, visibleTo: List<String>) {
+        try {
+            firestore.collection("activityFeed").document(entryId).set(hashMapOf(
+                "id" to entryId, "actorId" to actorId, "actorName" to actorName, "habitName" to habitName,
+                "type" to type, "timestamp" to System.currentTimeMillis(), "visibleTo" to visibleTo,
+                "reactions" to emptyMap<String, Boolean>()
+            )).await()
+        } catch (_: Exception) {}
+    }
+    suspend fun deleteAchievementFromFeed(entryId: String) {
+        try { firestore.collection("activityFeed").document(entryId).delete().await() } catch (_: Exception) {}
     }
 }

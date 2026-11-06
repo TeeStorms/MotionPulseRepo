@@ -359,17 +359,60 @@ class CommunityViewModel(
         }
     }
 
+    // FIXED: Safely handle the Result and prevent crashes
     fun respondToRequest(requestId: String, otherUserId: String, accept: Boolean) {
         viewModelScope.launch {
-            _userProfile.value?.let {
-                communityRepository.respondToFriendRequest(requestId, userId, it.displayName, otherUserId, accept)
+            respondToRequestSuspend(requestId, accept)
+        }
+    }
+
+    suspend fun respondToRequestSuspend(requestId: String, accept: Boolean): Result<Unit> {
+        val profile = _userProfile.value ?: db.userProfileDao().getProfile(userId).first()
+        val senderName = profile?.displayName?.ifBlank { null }
+            ?: com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.displayName?.ifBlank { null }
+            ?: "User"
+
+        return try {
+            if (accept) {
+                val result = communityRepository.acceptRequest(
+                    docId = requestId,
+                    recipientUid = userId,
+                    recipientName = senderName
+                )
+                if (result.isSuccess) {
+                    _nudgeFeedback.value = "Friend added!"
+                    retry()
+                } else {
+                    _nudgeFeedback.value = result.exceptionOrNull()?.message ?: "Could not accept request"
+                }
+                result
+            } else {
+                val result = communityRepository.declineRequest(
+                    docId = requestId,
+                    recipientUid = userId
+                )
+                if (result.isSuccess) {
+                    _nudgeFeedback.value = "Request declined."
+                    retry()
+                } else {
+                    _nudgeFeedback.value = result.exceptionOrNull()?.message ?: "Could not decline request"
+                }
+                result
             }
+        } catch (e: Exception) {
+            _nudgeFeedback.value = "Error: ${e.message}"
+            Result.failure(e)
         }
     }
 
     fun unfriend(otherUserId: String) {
         viewModelScope.launch {
-            communityRepository.unfriendAtomic(userId, otherUserId, db)
+            try {
+                communityRepository.unfriendAtomic(userId, otherUserId, db)
+                _nudgeFeedback.value = "Unfriended"
+            } catch (e: Exception) {
+                _nudgeFeedback.value = "Could not unfriend: ${e.message ?: "unknown error"}"
+            }
         }
     }
 
