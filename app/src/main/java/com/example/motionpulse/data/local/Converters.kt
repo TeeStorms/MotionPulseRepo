@@ -69,4 +69,28 @@ class Converters {
     fun toXpMap(value: String?): Map<String, Long>? {
         return value?.let { Json.decodeFromString<Map<String, Long>>(it) }
     }
+
+    @TypeConverter
+    fun fromAnyMap(value: Map<String, Any?>?): String? {
+        if (value == null) return null
+        val longMap = mutableMapOf<String, Long>()
+        value.forEach { (k, v) ->
+            val longVal = when (v) {
+                is Long -> v
+                is Int -> v.toLong()
+                is Double -> v.toLong()
+                is Float -> v.toLong()
+                is Number -> v.toLong()
+                is String -> v.toLongOrNull() ?: 0L
+                else -> 0L
+            }
+            longMap[k] = longVal
+        }
+        return Json.encodeToString(longMap)
+    }
+
+    @TypeConverter
+    fun toAnyMap(value: String?): Map<String, Any?>? {
+        return value?.let { Json.decodeFromString<Map<String, Long>>(it) }
+    }
 }

@@ -439,8 +439,8 @@ class CommunityViewModel(
     // Safely calculates XP for the last 7 days
     private fun computeWeeklyXp(profile: UserProfileEntity): Long {
         val weekAgo = LocalDate.now().minusDays(7)
-        return profile.recentXp.filterKeys {
-            try { LocalDate.parse(it).isAfter(weekAgo.minusDays(1)) } catch(e: Exception) { false }
+        return profile.getRecentXpAsLong().filterKeys {
+            try { !LocalDate.parse(it).isBefore(weekAgo) } catch (_: Exception) { false }
         }.values.sum()
     }
 

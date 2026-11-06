@@ -49,7 +49,7 @@ class LeaderboardAdapter(
                 LeaderboardMetric.WEEKLY_XP -> {
                     val weekAgo = LocalDate.now().minusDays(7)
                     // Safely parse recentXp and sum values for the last 7 days
-                    val weeklyXp = item.recentXp.filterKeys { dateStr ->
+                    val weeklyXp = item.getRecentXpAsLong().filterKeys { dateStr ->
                         try {
                             val date = LocalDate.parse(dateStr)
                             !date.isBefore(weekAgo)

@@ -69,7 +69,7 @@ class CompleteHabitUseCase(
                 val isNewPb = newCurrentStreak > habit.longestStreak
                 val xpResult = GamificationEngine.calculateXpGain(profile.totalAuraXp, isNewPb)
 
-                val newRecentXp = profile.recentXp.toMutableMap()
+                val newRecentXp = profile.getRecentXpAsLong().toMutableMap()
                 val currentTodayXp = newRecentXp[todayStr] ?: 0L
                 newRecentXp[todayStr] = currentTodayXp + xpResult.auraXpGained
 
@@ -110,11 +110,11 @@ class CompleteHabitUseCase(
                 val allActiveHabits = habitDao.getHabitsForUser(userId).first()
                 val maxStreak = allActiveHabits.maxOfOrNull { it.currentStreak } ?: 0
 
-                val currentTodayXp = profile.recentXp[todayStr] ?: 0L
+                val currentTodayXp = profile.getRecentXpAsLong()[todayStr] ?: 0L
                 val xpToDeduct = minOf(10L, currentTodayXp)
                 val newTotalXp = maxOf(0L, profile.totalAuraXp - xpToDeduct)
 
-                val newRecentXp = profile.recentXp.toMutableMap()
+                val newRecentXp = profile.getRecentXpAsLong().toMutableMap()
                 val newXpForToday = maxOf(0L, currentTodayXp - xpToDeduct)
                 newRecentXp[todayStr] = newXpForToday
 

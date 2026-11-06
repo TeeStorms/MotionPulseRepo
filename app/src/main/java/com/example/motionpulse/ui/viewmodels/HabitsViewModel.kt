@@ -524,7 +524,7 @@ class HabitsViewModel(
                     val xpResult = GamificationEngine.calculateXpGain(profile.totalAuraXp, isNewPb)
                     
                     val todayStr = date.toString()
-                    val newRecentXp = profile.recentXp.toMutableMap()
+                    val newRecentXp = profile.getRecentXpAsLong().toMutableMap()
                     newRecentXp[todayStr] = (newRecentXp[todayStr] ?: 0L) + xpResult.auraXpGained
                     
                     val updatedProfile = profile.copy(
